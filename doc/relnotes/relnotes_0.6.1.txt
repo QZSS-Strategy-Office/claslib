@@ -1,0 +1,35 @@
+
+CLASLIB: ver.0.6.1 Release Notes
+                                                                       2019/09/06
+--------------------------------------------------------------------------------
+
+New Features in ver.0.6.1
+(1)BINEX is supported in RNX2RTKP.
+(2)L6 message dump function is added.
+
+Changes: ver.0.6.0 -> ver.0.6.1
+(1) The following issues are improved or fixed.
+  (a) Fixed grid coordinates in clas_grid.def
+  (b) Added time consistency check option for around start/end of week epoch
+      between an input l6 file and an observation file(-l6w)
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    rnx2rtkp.c, cssr.c, postpos.c, ssr2obs.c, ssr2osr.c, rthcmn.c,
+    qzs2rtcm.c, rtkvrs.c, binex.c, rtklib.h, cssr.h
+
+(3) SSR2OSR
+  (a)Option -dump is added. 
+
+(4) RNX2RTKP
+  (a)BINEX is supported for inputs.
+  (b)Option -dump,-l6w are added. 
+
+(5) SSR2OBS
+  (a)Option -dump is added. 

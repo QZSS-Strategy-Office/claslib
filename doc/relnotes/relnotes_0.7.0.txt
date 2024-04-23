@@ -1,0 +1,39 @@
+
+CLASLIB: ver.0.7.0 Release Notes
+                                                                       2019/12/25
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.0
+(1)Compact SSR Atomospheric Correction Message (SubType 12) is supported.
+(2)BINEX upgraded decoded Galileo ephemeris (0x01-14) is supported 
+
+Changes: ver.0.6.1 -> ver.0.7.0
+(1) The following issues are improved or fixed.
+  (a)The output is unified to N/A when data field is invalid.
+  (b)Adjust timing of SubType 4 is fixed.
+ 
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    rtklib.h,cssr.h,cssr2osr.c,cssr.c,postpos.c,stec.c,ehemeris.c,binex.c,
+    ssr2obs.c,ssr2osr.c
+
+(3) SSR2OSR
+  (a)SubType 12 is supported for inputs. 
+  (b)The output is unified to N/A when data field is invalid (option '-dump').
+  (c)BINEX upgraded decoded Galileo ephemeris (0x01-14) for I/NAV is supported
+     instead of BINEX decoded Galileo ephemeris (0x01-04).
+
+(4) RNX2RTKP
+  (a)SubType 12 is supported for inputs.
+  (b)BINEX upgraded decoded Galileo ephemeris (0x01-14) for I/NAV is supported
+     instead of BINEX decoded Galileo ephemeris (0x01-04).
+     
+(5) SSR2OBS
+  (a)SubType 12 is supported for inputs.
+  (b)The output is unified to N/A when data field is invalid (option '-dump').

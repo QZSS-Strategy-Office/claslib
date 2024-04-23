@@ -1,0 +1,20 @@
+
+CLASLIB: ver.0.7.3 Release Notes
+                                                                       2022/08/25
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.3
+  noneiminor updatej
+
+
+Changes: ver.0.7.2 -> ver.0.7.3
+
+(1) The following issues are improved or fixed.
+ (a)Parameters for partial ambiguity resolution and ionospheric residual estimation have been improved to optimize for ionospheric disturbances.
+ (b)Partial ambiguity resolution process in VRS-RTK in the case of multiple satellites has been fixed.
+ (c)Time updates of the Kalman filter for ionospheric disturbances in VRS-RTK have been fixed.
+
+(2) The following source codes or configuration files are added, deleted or changed.
+  (a) changed
+    rtkvrs.c
+    kinematic.conf, kinematic_vrs.conf, static.conf, static_vrs.conf

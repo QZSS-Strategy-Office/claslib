@@ -1,0 +1,42 @@
+
+CLASLIB: ver.0.7.2 Release Notes
+                                                                       2020/11/17
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.2
+  noneiminor updatej
+
+
+Changes: ver.0.7.1 -> ver.0.7.2
+
+(1) The following issues are improved or fixed.
+  (a)Supported ocean loading effect calculation for analysis of static or moving rovers 
+     in addition to the Japanese CORS stations.
+  (b)Improved positioning quality in the case of change of "Message Generation Facility ID".
+  (c)Added processing patterns for the data field "Tropspheric Correction Availability" in SubType12.
+  (d)Refactoring source codes regarding Compact SSR decode section and lambda method.
+
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    cssr2osr.h, clas_grid.blq(input data)
+    
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.h, clasgrid.h, rtklib.h, 
+    cssr.c, cssr2osr.c, ephemeris.c, grid.c, isb.c, options.c, 
+    pntpos.c postpos.c ppp.c ppprtk.c, rtkcmn.c, rtkpos.c, rtkvrs.c, 
+    stec.c, stream.c, ssr2osr.c, ssr2obs.c, rnx2rtkp.c,
+    binex.c, novatel.c, nvs.c
+
+(3) SSR2OSR
+  (a)Added a new option in "pos1-tidecorr" for static or moving rovers.
+
+(4) RNX2RTKP
+  (a)Added a new option in "pos1-tidecorr" for static or moving rovers.
+  (b)Updated recommended configuration parameters  for IS-QZSS-L6-003 or later(pos2-aralpha and pos2-arminamb). 
+
+(5) SSR2OBS
+  (a)Added a new option in "pos1-tidecorr" for static or moving rovers.

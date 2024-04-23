@@ -1,0 +1,28 @@
+
+CLASLIB: ver.0.5.1 Release Notes
+                                                                       2018/09/04
+--------------------------------------------------------------------------------
+New Features in ver.0.5.1
+  noneiminor updatej
+    
+Changes: ver.0.5.0 -> ver.0.5.1
+(1) The following issues are improved or fixed.
+  (a)Fixed exception handling of tropsphere vertical delay when invalid value is input
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.c
+
+(3) SSR2OSR
+    none
+
+(4) RNX2RTKP
+  (a)Improved recommended option parameters for static mode(static.conf)
+
+--------------------------------------------------------------------------------

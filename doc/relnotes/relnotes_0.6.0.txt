@@ -1,0 +1,36 @@
+
+CLASLIB: ver.0.6.0 Release Notes
+                                                                       2019/02/20
+--------------------------------------------------------------------------------
+
+New Features in ver.0.6.0
+(1)A new utility "SSR2OBS" is added for converting Compact SSR to virtual observations.  
+(2)VRS-RTK processing mode is added in RNX2RTKP.
+(3)Grid file (clas_grid.def) attached in IS-QZSS-L6 is supported.
+(4)Some improvements on RNX2RTKP are implemented.  
+
+Changes: ver.0.5.2 -> ver.0.6.0
+(1) The following issues are improved or fixed.
+  (a)Fixed discontinuity by rounding for 100 wavelengths of phase bias
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    ssr2obs.c, rtkvrs.c
+
+  (b) deleted
+    none
+
+  (c) changed
+    ehpemeris.c, grid.c, rinex.c, options.c, pntpos.c, postpos.c, rtkcmn.c, rtkpos.c, solution.c, stream.c,
+    cssr.c, cssr2osr.c, ppprtk.c, rtklib.h, cssr.h
+    
+(3) SSR2OSR
+  none
+
+(4) RNX2RTKP
+  (a) Improved processing speed of kalman filter
+  (b) Improved the process to continue even when the value of STEC is invalid
+  
+(5) SSR2OBS
+  noe
+  

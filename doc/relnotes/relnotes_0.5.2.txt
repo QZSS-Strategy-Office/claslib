@@ -1,0 +1,32 @@
+
+CLASLIB: ver.0.5.2 Release Notes
+                                                                       2018/09/12
+--------------------------------------------------------------------------------
+New Features in ver.0.5.2
+  noneiminor updatej
+    
+Changes: ver.0.5.1 -> ver.0.5.2
+(1) The following issues are improved or fixed.
+  (a)none
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.c,cssr2osr.c,grid.c,options.c,ppprtk.c,rtkcmn.c,rtkpos.c,rtklib.h
+
+(3) SSR2OSR
+    none
+
+(4) RNX2RTKP
+  (a) Supportd option to set a priority of GPS L2 band signal when two signals (L2P/L2C) 
+      are input (-misc-rnxopt1=-GL2X)
+  (b) Added processing to reset kalman filter forcely when float solution continues 
+      over specified epochs (-misc-floatcnt)
+  (c) Improved recommended option parameters(static.conf)
+  (d) Re-changed default setting of makefile/conf from cygwin to MinGW
+--------------------------------------------------------------------------------

@@ -1,0 +1,32 @@
+
+CLASLIB: ver.0.7.1 Release Notes
+                                                                       2020/02/13
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.1
+  noneiminor updatej
+
+
+Changes: ver.0.7.0 -> ver.0.7.1
+(1) The following issues are improved or fixed.
+  (a)Refactoring source codes regarding inputs of each cssr subtype message (cssr.c)
+  (b)Adding an initial version of the cssr service information message decode function (decode_cssr_si())
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.h, cssr.c, grid.c, ppprtk.c, postpos.c, rtklib.h, ssr2osr.c, ssr2obs.c
+
+(3) SSR2OSR
+  none
+
+(4) RNX2RTKP
+  none
+
+(5) SSR2OBS
+  none

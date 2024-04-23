@@ -1,0 +1,70 @@
+
+CLASLIB: ver.0.5.0 Release Notes
+                                                                       2018/08/31
+--------------------------------------------------------------------------------
+New Features in ver.0.5.0
+(1) RINEX 3.02 is supported, instead RINEX 2.x is no longer supported.
+(2) Compact SSR GNSS Combined Correction Message (SubType 11) is supported.
+(3) Adds Grid definition file corresponding to IS-QZSS-L6 (Draft, August 31,2018).    
+(4) Some improvements on RNX2RTKP are implemented.  
+  
+Changes: ver.0.4.0 -> ver.0.5.0
+(1) The following issues are improved or fixed.
+  (a)Improved point positioning algorithm for PPP-RTK mode
+  (b)Fixed URA unit conversion of Galileo ephemeris
+  (c)Fixed update timing for network phase bias
+  (d)Fixed old grid definition file (cssrgrid_201709.def)
+  (e)Fixed a bug in snr mask handling
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+   none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.h, cssr.c, cssr2osr.c, postpos.c ppprtk.c, grid.c, pntpos.c
+    rtkcmn.c, ephemris.c, options.c, rtklib.h, rinex.c, stec.c
+    rcv/binex.c, rcv/novatel.c, rcv/nvs.c
+
+(3) SSR2OSR
+  (a) Supported Galileo
+  (b) Supported Compact SSR GNSS Combined Correction Message (SubType 11)
+  (c) Improved grid selection algorithm especially when a rover exist in a boundary area 
+      between different networks
+
+(4) RNX2RTKP
+  (a) Supported Galileo(maximum Galileo PRN number is 36)
+  (b) Supported Compact SSR GNSS Combined Correction Message (SubType 11)
+  (c) Improved grid selection algorithm especially when a rover exist in a boundary area 
+      between different networks
+  (d) Added ambiguity fixing mode between GPS and QZSS (-pos2-qzsarmode) 
+  (e) Added filter reset procedure, which is applied upon failing measurement updates
+  (f) Added configuration file options -pos1-snrmask_L5
+  (g) Supported positioning with 30 second epoch interval(-ti 30)
+  (h) Added process noise for estimated state parameters of coordinates 
+      in static mode(-stats-prnposith, -stats-prnpositv) 
+  (i) Added new estimation approach to adjust process noise of 
+      ionosphere delay adaptively(-pos1-ionoopt=est-adaptive)
+  (j) Added cycle slip detection and repair in phase bias correction
+  (k) Added new estimation approach to adjust process noise for
+      estimated state parameters of coordinates/velocity/acceleration
+      (pos2-prnadapt, pos2-forgetpva, pos2-afgainpva)
+  (l) Increased options for GPS and QZSS signal combination used in PPP-RTK mode
+      (pos1-pospot11)
+  (m) Updated EOP parameters in erp-file (igu00p01.erp)
+  (n) Deleted a temporary processing to apply ssr corrections for L2P to L2C observations
+  (o) Deleted detections and corrections of cycle slips with 10/20 cycles in phase bias correction
+  (p) Added a positioning option to set maximum DOPs to fix integer ambiguity and hold ambiguity 
+  (q) Improved processing speed in processing to keep symmetry of a state covariance matrix
+  (r) Added processing to initialize the state vector and its error covariance 
+      if the difference between ppprtk and point positioning(single) solutions exceeds 
+      a threshold value (pos2-rejdiffpse)
+  (s) Added processing to initialize the state vector and its error covariance 
+      if integer ambiguities are not obtained over predefined consecutive epochs
+      (misc-retrycnt, misc-epochtoretry)
+  (t) Added processing for single grid selection mode in PPP-RTK positioing calculation
+      if the distance between nearest gird and point positioning(single) is close.
+      (pos1-gridsel)
+--------------------------------------------------------------------------------

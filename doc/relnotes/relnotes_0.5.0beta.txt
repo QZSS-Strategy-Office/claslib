@@ -1,0 +1,39 @@
+
+CLASLIB: ver.0.5.0beta Release Notes
+                                                                       2018/07/04
+--------------------------------------------------------------------------------
+New Features in ver.0.5.0beta
+(1) RINEX 3.02 is supported, instead RINEX 2.x is no longer supported.
+(2) Some improvements on RNX2RTKP are implemented.
+
+Changes: ver.0.4.0 -> ver.0.5.0beta
+(1) The following issues are improved or fixed.
+  (a)Improved point positioning algorithm for PPP-RTK mode
+  (b)Fixed URA unit conversion of Galileo ephemeris
+  (c)Fixed update timing for network phase bias
+  (d)Fixed old grid definition file (cssrgrid_201709.def)
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+   none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.c, cssr2osr.c, postpos.c ppprtk.c, grid.c, pntpos.c
+    rtkcmn.c, ephemris.c, options.c, rtklib.h, rinex.c, stec.c
+    rcv/binex.c, rcv/novatel.c, rcv/nvs.c
+
+(3) SSR2OSR
+	none (Galileo is not supported in beta version)
+	
+(4) RNX2RTKP
+  (a) Galileo E1 and E5a is supported.
+  (b) Grid selection algorithm is improved especially when a rover exist in 
+      a boundary area between different networks.
+  (c) Ambiguity fixing mode between GPS and QZSS (-pos2-qzsarmode) is supported.
+  (d) Filter reset procedure is added, which is applied upon failing measurement updates.
+  (e) Configuration file options -pos1-snrmask_L5, -pos2-qzsarmode are added.
+  
+--------------------------------------------------------------------------------
