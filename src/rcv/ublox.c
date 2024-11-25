@@ -493,7 +493,6 @@ static int decode_navtime(raw_t *raw)
 /* decode ubx-trk-meas: trace measurement data -------------------------------*/
 static int decode_trkmeas(raw_t *raw)
 {
-    static double adrs[MAXSAT]={0};
     gtime_t time;
     double ts,tr=-1.0,t,tau,utc_gpst,snr,adr,dop;
     int i,j,n=0,nch,sys,prn,sat,qi,frq,flag,lock1,lock2,week;
@@ -577,7 +576,6 @@ static int decode_trkmeas(raw_t *raw)
               lock1,lock2,ts,snr,dop,adr,
               adrs[sat-1]==0.0||dop==0.0?0.0:(adr-adrs[sat-1])-dop);
 #endif
-        adrs[sat-1]=adr;
         
         /* check phase lock */
         if (!(flag&0x20)) continue;
@@ -614,7 +612,6 @@ static int decode_trkmeas(raw_t *raw)
 /* decode ubx-trkd5: trace measurement data ----------------------------------*/
 static int decode_trkd5(raw_t *raw)
 {
-    static double adrs[MAXSAT]={0};
     gtime_t time;
     double ts,tr=-1.0,t,tau,adr,dop,snr,utc_gpst;
     int i,j,n=0,type,off,len,sys,prn,sat,qi,frq,flag,week;
@@ -696,7 +693,6 @@ static int decode_trkd5(raw_t *raw)
               prn,frq,flag,ts,snr,dop,adr,
               adrs[sat-1]==0.0||dop==0.0?0.0:(adr-adrs[sat-1])-dop);
 #endif
-        adrs[sat-1]=adr;
         
         /* check phase lock */
         if (!(flag&0x08)) continue;

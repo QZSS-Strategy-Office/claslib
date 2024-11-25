@@ -498,6 +498,8 @@ extern int decode_glostr(const unsigned char *buff, geph_t *geph)
     
     if (frn1!=1||frn2!=2||frn3!=3||frn4!=4) {
         trace(3,"decode_glostr error: frn=%d %d %d %d %d\n",frn1,frn2,frn3,frn4);
+        trace(3,"decode_glostr error: P1=%d P2=%d P3=%d P=%d P4=%d M=%d NT=%d ln=%d\n",
+						              P1,P2,P3,P,P4,M,NT,ln);
         return 0;
     }
     if (!(geph->sat=satno(SYS_GLO,slot))) {
@@ -962,15 +964,7 @@ extern int input_raw(raw_t *raw, int format, unsigned char data)
         case STRFMT_OEM4 : return input_oem4 (raw,data);
         case STRFMT_OEM3 : return input_oem3 (raw,data);
         case STRFMT_UBX  : return input_ubx  (raw,data);
-        case STRFMT_SS2  : return input_ss2  (raw,data);
-        case STRFMT_CRES : return input_cres (raw,data);
-        case STRFMT_STQ  : return input_stq  (raw,data);
-        case STRFMT_GW10 : return input_gw10 (raw,data);
-        case STRFMT_JAVAD: return input_javad(raw,data);
-        case STRFMT_NVS  : return input_nvs  (raw,data);
         case STRFMT_BINEX: return input_bnx  (raw,data);
-        case STRFMT_RT17 : return input_rt17 (raw,data);
-        case STRFMT_LEXR : return input_lexr (raw,data);
     }
     return 0;
 }
@@ -989,15 +983,7 @@ extern int input_rawf(raw_t *raw, int format, FILE *fp)
         case STRFMT_OEM4 : return input_oem4f (raw,fp);
         case STRFMT_OEM3 : return input_oem3f (raw,fp);
         case STRFMT_UBX  : return input_ubxf  (raw,fp);
-        case STRFMT_SS2  : return input_ss2f  (raw,fp);
-        case STRFMT_CRES : return input_cresf (raw,fp);
-        case STRFMT_STQ  : return input_stqf  (raw,fp);
-        case STRFMT_GW10 : return input_gw10f (raw,fp);
-        case STRFMT_JAVAD: return input_javadf(raw,fp);
-        case STRFMT_NVS  : return input_nvsf  (raw,fp);
         case STRFMT_BINEX: return input_bnxf  (raw,fp);
-        case STRFMT_RT17 : return input_rt17f (raw,fp);
-        case STRFMT_LEXR : return input_lexrf (raw,fp);
     }
     return -2;
 }

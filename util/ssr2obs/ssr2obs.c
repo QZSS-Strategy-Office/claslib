@@ -254,7 +254,7 @@ static int gen_osr(gtime_t ts, gtime_t te, double ti, double latency, int mode,
     static rtcm_t rtcm_ = {0};
     static obsd_t data[MAXOBS] = {0,};
     static osrd_t osr[MAXOBS] = {0,};
-    FILE *fp_in, *fp_out, *dummy_fp[CSSR_TYPE_NUM];
+    FILE *fp_in, *fp_out, *dummy_fp[CSSR_TYPE_NUM] = {0,};
     obs_t obs = {0};
     gtime_t time;
     char path[1024];
@@ -328,6 +328,8 @@ static int gen_osr(gtime_t ts, gtime_t te, double ti, double latency, int mode,
     rtcm_.time=    ts;
     rtcm.nav.rtcmmode=rtcm_.nav.rtcmmode=RTCMMODE_CSSR;
     rtcm.mode=RTCMMODE_CSSR;
+    
+    init_fastfix_flag();
 
     for (i = 0; i < nt; i++) {
         time = timeadd(ts, ti * i); 
@@ -337,6 +339,7 @@ static int gen_osr(gtime_t ts, gtime_t te, double ti, double latency, int mode,
         while (rtcm_.subtype != 1 || timediff(rtcm_.time,time) <= -latency) {
             if ((ret=input_cssrf(&rtcm_,fp_in,dummy_fp))<-1) break;
         }
+        updateclas(&rtcm, prcopt, time, rtcm.mode);
 
         if (rtcm_.nav.filreset == TRUE) {
                 rtcm.nav.filreset = rtcm_.nav.filreset;

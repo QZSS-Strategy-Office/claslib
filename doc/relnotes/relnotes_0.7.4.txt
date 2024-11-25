@@ -1,0 +1,57 @@
+
+CLASLIB: ver.0.7.4 Release Notes
+                                                                       2024/10/03
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.4
+  noneiminor updatej
+
+
+Changes: ver.0.7.3 -> ver.0.7.4
+
+(1) The following issues are improved or fixed.
+ (a)Fixed a bug in the processing of missing ST4 messages.
+ (b)Fixed the difference between the orbit correction and the clock correction update
+    time to be less than 30 seconds.
+ (c)Added status check before selecting a grid.
+ (d)Improved update timing for clock correction.
+ (e)Improved handling of week changes.
+ (f)Improved handling of network selection.
+ (g)Fixed a bug that selected future tropospheric corrections over the observation
+    time.
+ (h)Fixed a bug that caused the Kalman filter to update time twice in one epoch.
+ (i)Improved bit width check processing.
+ (j)Improved health check processing for QZS.
+ (k)Improved processing regarding invisible satellites.
+ (l)Improved processing regarding "Tropospheric Correction Availability" and
+    "STEC Correction Availability".
+ (m)Improved processing of using uninitialized variables.
+ (n)Fixed dump output of ST9 and ST12 to be output after conversion to physical
+    quantity.
+
+(2) The following source codes or configuration files are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    crescent.c, gw10.c, javad.c, nvs.c, rcvlex.c, rt17.c, septentrio.c, skytraq.c,
+    ss2.c
+
+  (c) changed
+    clasgrid.h, cssr2osr.h, rtklib.h
+    binex.c, novatel.c, ublox.c, cssr.c, cssr2osr.c, ephemeris.c, geoid.c, grid.c,
+    ionex.c, isb.c, lambda.c, options.c, pntpos.c, postpos.c, ppp.c, ppp_ar.c, ppprtk.c,
+    preceph.c, qzslex.c, rcvraw.c, rinex.c, rtcm.c, rtcm2.c, rtcm3.c,rtcm3e.c, rtkcmn.c,
+    rtkpos.c, rtkvrs.c, sbas.c, solution.c, stec.c
+    kinematic.conf, kinematic_vrs.conf, static.conf, static_vrs.conf, sample.conf
+
+(3) SSR2OSR
+  (a)Improved recommended option parameters.
+
+(4) RNX2RTKP
+  (a)Improved recommended option parameters.
+  (b)Option "misc-retrycnt" and "misc-epochtoretry" are deleted.
+
+(5) SSR2OBS
+  (a)Improved recommended option parameters.
+  (b)Improved generate osr processing.

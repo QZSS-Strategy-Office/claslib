@@ -8,8 +8,6 @@
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
-static const char rcsid[]="$Id:$";
-
 #define MAX_STECFILE 2048
 #define MAX_NGRID   4           /* number of grids for interpolation */
 #define MAX_DIST    100.0       /* max distance to grid (km) */

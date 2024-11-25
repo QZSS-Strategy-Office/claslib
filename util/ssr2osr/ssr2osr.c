@@ -73,8 +73,8 @@ int main(int argc, char **argv)
     solopt_t solopt=solopt_default;
     filopt_t filopt={""};
     gtime_t ts={0},te={0};
-    double tint=1.0,es[]={2000,1,1,0,0,0},ee[]={2000,12,31,23,59,59},pos[3];
-    int i,j,n,ret=0;
+    double tint=1.0,es[]={2000,1,1,0,0,0},ee[]={2000,12,31,23,59,59};
+    int i,n,ret=0;
     char *infile[MAXFILE],*outfile="";
     FILE *ofp[CSSR_TYPE_NUM];
     

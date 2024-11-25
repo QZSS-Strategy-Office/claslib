@@ -550,7 +550,7 @@ extern "C" {
 #define PHASE_CYCLE -0.25
 
 #define MAXAGESSR_CLK   120.0   /* max age of ssr clock (s) */
-#define MAXAGESSR_ORB   120.0   /* max age of ssr orbit (s) */
+#define MAXAGESSR_ORB   240.0   /* max age of ssr orbit (s) */
 #define MAXAGESSR_BIAS  120.0   /* max age of ssr cbias/pbias (s) */
 #define MAXAGESSR_TROP  120.0   /* max age of ssr trop (s) */
 #define MAXAGESSR_IONO  120.0   /* max age of ssr iono (s) */
@@ -857,8 +857,6 @@ typedef struct {        /* SSR correction type */
     gtime_t t0[MAX_INDEX_SSR];      /* epoch time (GPST) {eph,clk,hrclk,ura,cbias,pbias,vtec,trop,stec} */
     double udi[MAX_INDEX_SSR];      /* SSR update interval (s) */
     int iod[MAX_INDEX_SSR];         /* iod ssr {eph,clk,hrclk,ura,cbias,pbias,vtec,trop,stec} */
-    int network[MAX_INDEX_SSR];
-    int satno[MAX_INDEX_SSR];
     int iode;           /* issue of data */
     int iodcrc;         /* issue of data crc for beidou/sbas */
     int ura;            /* URA indicator */
@@ -893,27 +891,6 @@ typedef struct {        /* SSR correction type */
     int hold_oc_tow;
     double dlt_dclk;
 } ssr_t;
-
-typedef struct {                         /* SSR correction type */
-    gtime_t t0[4];                       /* epoch time (GPST) {cbias, pbias} */
-    double udi[4];                       /* SSR update interval (s) */
-    int iod[4];                          /* iod ssr {cbias,pbias} */
-    int network[4];
-    int satno[4];
-    int facility[4];
-    int nsig;                            /* number of signals used for ssrg cssr */
-    int smode[MAXCODE];                  /* signnal mode for ssrg ssrig ssrcg*/
-    float cbias[MAXCODE];                /* code biases (m) */
-    float pbias[MAXCODE];                /* phase biases (m) */
-    unsigned int discontinuity[MAXCODE]; /* discontinuity indicator */
-    int iode;                            /* IODE */
-    double deph[3];                      /* delta orbit {radial,along,cross} (m) */
-    double dclk;                         /* delta clock {c0} (m) */
-    unsigned char update_cb;             /* update flag (0:no update,1:update) */
-    unsigned char update_pb;             /* update flag (0:no update,1:update) */
-    unsigned char update_oc;             /* update flag (0:no update,1:update) */
-    unsigned char update_cc;             /* update flag (0:no update,1:update) */
-} extra_correct;
 
 typedef struct {
     float height; /* height of ionoephere layer */
@@ -1118,8 +1095,6 @@ typedef struct {        /* navigation data type */
     dgps_t dgps[MAXSAT]; /* DGPS corrections */
     ssrion_t ssr_ion;   /* SSR ionoshpere correction */
     ssr_t ssr[MAXSAT];  /* SSR corrections */
-    extra_correct extcorr[CSSR_MAX_NETWORK][MAXSAT];
-    int separation;
     lexeph_t lexeph[MAXSAT]; /* LEX ephemeris */
     lexion_t lexion;    /* LEX ionosphere correction */
     int rtcmmode;       /* rtcm mode (5:cssr) */
@@ -1144,7 +1119,6 @@ typedef struct {        /* solution type */
     double dtr[6];      /* receiver clock bias to time systems (s) */
     unsigned char type; /* type (0:xyz-ecef,1:enu-baseline) */
     unsigned char stat; /* solution status (SOLQ_???) */
-    unsigned char pstat; /* previous solution status (SOLQ_???) */
     unsigned char ns;   /* number of valid satellites */
     float age;          /* age of differential (s) */
     float ratio;        /* AR ratio factor for valiation */
@@ -1219,6 +1193,7 @@ typedef struct {        /* RTCM control struct type */
     char opt[256];      /* RTCM dependent options */
     ssrion_t ssr_ion[CSSR_MAX_NETWORK];   /* SSR ionosphere correction */
     ssrgp_t ssrg[CSSR_MAX_NETWORK];   /* SSR gridded correction */
+    gtime_t obs_ref[12];
     int week_ref[12];
     int tow_ref[12];
     int tow0;
@@ -1347,7 +1322,6 @@ typedef struct {        /* processing options type */
     char rnxopt[2][256]; /* rinex options {rover,base} */
     int  posopt[12];    /* positioning options */
     int  syncsol;       /* solution sync mode (0:off,1:on) */
-    int  overlap;       /* overlap mode (0:off,1:on) */
     double odisp[2][6*11]; /* ocean tide loading parameters {rov,base} */
     exterr_t exterr;    /* extended receiver error model */
     char rectype[2][MAXANT]; /* receiver types {rover,base} */
@@ -1664,6 +1638,7 @@ extern int  satid2no(const char *id);
 extern void satno2id(int sat, char *id);
 extern unsigned char obs2code(const char *obs, int *freq);
 extern char *code2obs(unsigned char code, int *freq);
+extern int  satsigexclude(obsd_t *obs, int svh, const prcopt_t *opt);
 extern int  satexclude(int sat, int svh, const prcopt_t *opt);
 extern int  testsnr(int base, int freq, double el, double snr,
                     const snrmask_t *mask);
@@ -2073,14 +2048,18 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
 /* precise positioning -------------------------------------------------------*/
 extern void rtkinit(rtk_t *rtk, const prcopt_t *opt);
 extern void rtkfree(rtk_t *rtk);
+#ifdef ENA_PPP_RTK
 extern int  rtkpos (rtk_t *rtk, const obsd_t *obs, int nobs, nav_t *nav);
+#else
+extern int  rtkpos (rtk_t *rtk, obsd_t *obs, int nobs, nav_t *nav);
+#endif
 extern int  rtkopenstat(const char *file, int level);
 extern void rtkclosestat(void);
 
 extern void rtkinitppprtk(rtk_t *rtk, const prcopt_t *opt);
 extern void rtkfreeppprtk(rtk_t *rtk);
 extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav);
-extern int  ssr2osr(rtk_t *rtk, const obsd_t *obs, const int n, nav_t *nav,
+extern int  ssr2osr(rtk_t *rtk, obsd_t *obs, const int n, nav_t *nav,
                  osrd_t *osr, const int mode);
 
 /* precise point positioning -------------------------------------------------*/
@@ -2103,7 +2082,7 @@ extern int postpos(gtime_t ts, gtime_t te, double ti, double tu,
                    const prcopt_t *popt, const solopt_t *sopt,
                    const filopt_t *fopt, char **infile, int n, char *outfile,
                    const char *rov, const char *base);
-extern void updateclas(rtcm_t *rtcm, const prcopt_t *popt, gtime_t obstime, int rtcm_mode);
+extern void updateclas(rtcm_t* rtcm, const prcopt_t* popt, gtime_t obstime, int rtcm_mode);
 /* stream server functions ---------------------------------------------------*/
 extern void strsvrinit (strsvr_t *svr, int nout);
 extern int  strsvrstart(strsvr_t *svr, int *opts, int *strs, char **paths,
@@ -2166,29 +2145,25 @@ extern int input_cssr(rtcm_t *cssr, unsigned char data, uint8_t *frame);
 extern int input_cssrf(rtcm_t *cssr, FILE *fp, FILE **ofp);
 extern int decode_qzs_msg(rtcm_t *rtcm, int head, uint8_t *frame, FILE **ofp);
 extern int read_grid_def(const char *gridfile);
-extern void RestoreCurrentCSSR(grid_t *grid);
-extern int GetCurrentCSSRFacility(void);
-extern int CheckCurrentCSSRData(int network);
-extern void BackupCurrentCSSR(grid_t *grid);
-extern void ClearCurrentCSSR(void);
+extern int get_current_cssr_facility(void);
+extern void backup_current_cssr(grid_t *grid);
+extern void clear_current_cssr(void);
 
-extern int GetCloseCSSR(gtime_t time, int network);
-extern int GetCloseSSRG(gtime_t time);
-extern void UpdateGlobalCSSR(ssr_t *ssr, int sat);
-extern void UpdateGlobalSSRG(ssr_t *ssr, int sat);
-extern void UpdateLocalCSSR(nav_t *nav);
-extern void UpdateLocalSSRG(nav_t *nav);
-extern void CheckCSSRFacility(nav_t *nav, int network);
-extern gtime_t GetCurrentCSSRTime(void);
-extern gtime_t GetBackupCSSRTime(void);
-extern gtime_t GetCurrentSSRGTime(void);
-extern void RestoreCurrentCSSR(grid_t *grid);
-extern void BackupCurrentCSSR(grid_t *grid);
-extern int GetCurrentCSSRFacility(void);
-extern int IsSISAdjust(void);
-extern int GetL6Stocker(unsigned char *buff, gtime_t obstime, double delay);
-extern int SpoolCSSRStocker(rtcm_t *cssr, FILE *fp, gtime_t obstime);
-extern void SetCSSRStockerWeek(int week);
+extern void init_fastfix_flag(void);
+extern void check_cssr_grid_status(gtime_t time);
+extern int get_close_cssr(gtime_t time, int network);
+extern void update_global_cssr(ssr_t *ssr, int sat);
+extern void update_local_cssr(nav_t *nav);
+extern void check_cssr_facility(nav_t *nav, int network);
+extern gtime_t get_current_cssr_time(void);
+extern gtime_t get_backup_cssr_time(void);
+extern void restore_current_cssr(gtime_t time, grid_t *grid);
+extern void backup_current_cssr(grid_t *grid);
+extern int get_current_cssr_facility(void);
+extern int is_sis_adjust(void);
+extern int get_l6_stocker(unsigned char *buff, gtime_t obstime, double delay);
+extern int spool_cssr_stocker(rtcm_t *cssr, FILE *fp, gtime_t obstime);
+extern void set_cssr_stocker_week(int week);
 #define SSRVALIDAGE     30.0
 
 /* grid */
@@ -2197,22 +2172,18 @@ extern int add_data_stec(stec_t *stec, gtime_t time, int sat, int slip,
                          double iono, double rate, double rms, double quality);
 extern int add_data_trop(zwd_t *z, gtime_t time, double zwd, double ztd,
                          double quality, double rms, int valid);
-extern int get_grid_index(const nav_t *nav, const double *pos, grid_t *grid,
-                          prcopt_t *opt, gtime_t obstime, int selectflag);
+extern int get_grid_index(nav_t *nav, double *pos, grid_t *grid, prcopt_t *opt, gtime_t obstime);
 extern int trop_data(zwd_t *z, gtime_t time, double *ztd, double *zwd,
                      double *quality, const int idx, int *valid);
 extern int stec_grid_data(const nav_t *nav, const int *index, gtime_t time,
                           int sat, int n, const double *weight,
                           const double *Gmat, const double *Emat, double *iono,
-                          double *rate, double *var,double *quality, int *brk);
+                          double *rate, double *var, int *brk);
 extern int trop_grid_data(const nav_t *nav, const int *index, gtime_t time,
                           int n, const double *weight, const double *Gmat,
-                          const double *Emat, double *zwd, double *ztd,
-                          double *quality, int *tbrk);
+                          const double *Emat, double *zwd, double *ztd, int *tbrk);
 extern void free_grid(nav_t *nav);
 extern void get_oload_ptr(nav_t *nav);
-extern int CheckCSSRGrid(int network);
-extern int CheckGridData(gtime_t time, int network, int index);
 
 /* isb function ---------------------------------------------------  */
 extern int readisb(const char *file, nav_t *nav);

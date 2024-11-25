@@ -32,8 +32,6 @@
 #include "rtklib.h"
 #include "cssr.h"
 
-static const char rcsid[]="$Id: postpos.c,v 1.1 2008/07/17 21:48:06 ttaka Exp $";
-
 #define MIN(x,y)    ((x)<(y)?(x):(y))
 #define SQRT(x)     ((x)<=0.0?0.0:sqrt(x))
 #define SQR(x)      ((x)*(x))
@@ -198,7 +196,6 @@ static int nextobsb(const obs_t *obs, int *i, int rcv)
 /* input obs data, navigation messages and sbas correction -------------------*/
 static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
 {
-    static rtcm_t rtcm_dummy = {0};
     gtime_t time={0};
     char path[1024],*ext=NULL;
     int nu,nr,n=0,rtcm_mode=0;
@@ -278,8 +275,10 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
                         }
                         for (j = 0; j < sizeof(rtcm_.week_ref) / sizeof(int); j++) {
                             rtcm_.week_ref[j] = week_ref;
+                            rtcm_.obs_ref[j] = obs[0].time;
                         }
                         trace(2,"cssr file open: path=%s, week=%d\n",path,week_ref);
+                        init_fastfix_flag();
                     }
                 }
                 rtcm.mode=rtcm_mode;
@@ -295,6 +294,7 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
                     trace(4, "read cssr: obs=%.1f, rtcm=%.1f, type=%2d\n",
                         time2gpst(obs[0].time, NULL), time2gpst(rtcm_.time, NULL), rtcm_.subtype);
                 }
+                updateclas(&rtcm,popt,obs[0].time,rtcm_mode);
             }
         }
     }

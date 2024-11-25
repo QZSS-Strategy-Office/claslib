@@ -33,7 +33,6 @@
 extern FILE *fp_osr;
 #endif
 /* global variables ----------------------------------------------------------*/
-#ifdef CSSR2OSR_VRS
 static unsigned char obsfreqs[]={ /* 1:L1,2:L2,3:L5,4:L6,5:L7,6:L8,7:L3 */
     
     0, 1, 1, 1, 1,  1, 1, 1, 1, 1, /*  0- 9 */
@@ -42,7 +41,19 @@ static unsigned char obsfreqs[]={ /* 1:L1,2:L2,3:L5,4:L6,5:L7,6:L8,7:L3 */
     4, 4, 4, 4, 4,  4, 4, 6, 6, 6, /* 30-39 */
     2, 2, 4, 4, 3,  3, 3, 1, 1, 0  /* 40-49 */
 };
-#endif
+
+/* ----------- update ssr struct --------------------------------------*/
+extern void updateclas(rtcm_t* rtcm, const prcopt_t* popt, gtime_t obstime, int rtcm_mode)
+{
+    switch (rtcm_mode) {
+    case RTCMMODE_CSSR:
+        /* check grid status of cssr */
+        check_cssr_grid_status(obstime);
+        break;
+    default:
+        break;
+    }
+}
 
 /* precise tropospheric model ------------------------------------------------*/
 extern double prectrop(gtime_t time, const double *pos, const double *azel,
@@ -59,10 +70,29 @@ extern double prectrop(gtime_t time, const double *pos, const double *azel,
     return m_d*tdvd*ztd+m_w*twvd*zwd;
 
 }
-
+extern int selfreqpair(const int sat, const prcopt_t *opt,const obsd_t *obs)
+{
+    int optf=opt->posopt[10];
+    if (NFREQ==1||optf==POSL1) {
+         return 0;
+    }else {
+        if ((satsys(sat,NULL))&(SYS_GAL)) {/* GAL */
+            if(obs->L[2]!=0.0||obs->P[2]!=0.0) return 2; 
+            return 0; 
+        }
+        if (optf==POSL1L2L5) return 1+2;
+        if (optf==POSL1L5) return 2;
+        if (optf==POSL1L5_L2&&obs->L[2]!=0.0&&obs->P[2]!=0.0) return 2;
+        if (optf==POSL1L2) {
+             if (obs->L[1]!=0.0||obs->P[1]!=0.0) return 1;
+             return 0;
+        }
+        return 1;
+    }
+}
 /* phase and code residuals --------------------------------------------------*/
 #ifndef CSSR2OSR_VRS
-extern int zdres(const obsd_t *obs,
+extern int zdres(const obsd_t *obs_org,
 #else
 extern int zdres(obsd_t *obs,
 #endif
@@ -73,20 +103,32 @@ extern int zdres(obsd_t *obs,
                  int osrlog, double *cpc, gtime_t *pt0, grid_t *grid,
                  ssat_t *ssat, prcopt_t *opt, sol_t *sol, osrd_t *osr)
 {
-    double r,rr[3],disp[3],pos[3],meas[NFREQ*2],modl[NFREQ*2],zwd,ztd,quality;
+    double r,rr[3],disp[3],pos[3],meas[NFREQ*2],zwd,ztd;
     double *lam,fi;
-    int i,j,f,qj,sat,sys,nv=0,brk,nf=opt->nf;
+    int i,j,f,qj,sat,sys,brk,nf=opt->nf, nftmp;
     int tbrk=0;
-    double isb[NFREQ][2]={0},ydif=0.0;
-    int nsig,k=0;
+    double isb[NFREQ][2]={0};
+#ifndef CSSR2OSR_VRS
+    double modl[NFREQ * 2];
+    obsd_t *obs=NULL;
+#else
+    double modl[CSSR_MAX_SIG * 2];
+#endif
+#ifdef CSSR2OSR_VRS
+    int nsig;
+#endif
     double isb_by_prn[NFREQ];
     double tow;
     static double pbias_ofst[MAXSAT*(NFREQ+NEXOBS)]={0};
     double dcpc;
 #ifdef ENA_PPP_RTK
+	int nv=0;
+    double ydif=0.0;
+
     osrd_t osrtmp[MAXOBS]={{{0}}};
     osr = osrtmp;
 #else
+	int k=0;
     static double cpctmp[MAXSAT*(NFREQ+NEXOBS)]={0};
     static gtime_t pt0tmp[MAXSAT*(NFREQ+NEXOBS)]={0};
     pt0=pt0tmp;
@@ -106,11 +148,21 @@ extern int zdres(obsd_t *obs,
     for (i=0;i<3;i++) rr[i]=x[i];
 
     if (norm(rr,3)<=0.0) return 0;
+    
+#ifndef CSSR2OSR_VRS
+    if (!(obs=(obsd_t *)malloc(sizeof(obsd_t)*n))) return 0;
+    for (i=0;i<n&&i<MAXOBS;i++) {
+        obs[i]=obs_org[i];
+    }
+#endif
 
     sol->network = grid->network;
     ecef2pos(rr,pos);
-    if (!trop_grid_data(nav, grid->index, obs[0].time, grid->num, grid->weight, grid->Gmat, grid->Emat, &zwd, &ztd, &quality,&tbrk)) { /* zenith trop delay */
+    if (!trop_grid_data(nav, grid->index, obs[0].time, grid->num, grid->weight, grid->Gmat, grid->Emat, &zwd, &ztd, &tbrk)) { /* zenith trop delay */
         trace(2,"trop correction error: time=%s \n", time_str(obs[0].time,2));
+#ifndef CSSR2OSR_VRS    
+        free(obs);
+#endif
         return 0;
     }
 
@@ -127,9 +179,9 @@ extern int zdres(obsd_t *obs,
     nav->invtrop=tbrk;
 #endif
 
-    for (i=0,k=0;i<n&&i<MAXOBS;i++) {
+    for (i=0;i<n&&i<MAXOBS;i++) {
         int iodeflag = FALSE, prn;
-        double tmp_r, tmp_dts;
+        double tmp_r=-1.0, tmp_dts;
         sat=obs[i].sat;
         lam=nav->lam[sat-1];
         sys=satsys(sat,&prn);
@@ -147,7 +199,7 @@ extern int zdres(obsd_t *obs,
         }
 
         /* excluded satellite? */
-        if (satexclude(obs[i].sat,svh[i],opt)) continue;
+        if (satsigexclude(&obs[i],svh[i],opt)) continue;
 
         /* shapiro time delay correction */
         if (opt->posopt[7]) osr[i].relatv=shapiro(rs+i*6,rr);
@@ -172,12 +224,16 @@ extern int zdres(obsd_t *obs,
             continue;
         }
 #endif
-
+        
 #ifndef CSSR2OSR_VRS
+        qj=selfreqpair(sat,opt,obs+i);
+        nftmp = nf;
         for (j=0;j<nf;j++) {
             f=j;
+            if (f!=0&&f!=qj) continue;
 #else
         nsig=nav->ssr[sat-1].nsig;
+        nftmp = nsig;
         for (j=0;j<nsig;j++) {
             f=obsfreqs[nav->ssr[sat-1].smode[j]];f=f>0?f-1:0;
 #endif
@@ -205,7 +261,7 @@ extern int zdres(obsd_t *obs,
                 }
             }
             if (iodeflag == TRUE) {
-                if (j == 0) {
+                if (tmp_r<0.0) {
                     /* transmission time by satellite clock */
                     gtime_t dtsat = timeadd(obs[i].time,-obs[i].P[0]/CLIGHT);
                     tmp_r = r;
@@ -215,14 +271,14 @@ extern int zdres(obsd_t *obs,
                 }
 
                 modl[j]   =tmp_r-CLIGHT*tmp_dts+osr[i].CPC[j];
-                modl[nf+j]=tmp_r-CLIGHT*tmp_dts+osr[i].PRC[j];
+                modl[nftmp+j]=tmp_r-CLIGHT*tmp_dts+osr[i].PRC[j];
                 osr[i].CPC[j]+=tmp_r-CLIGHT*tmp_dts-(r-CLIGHT*dts[i*2]);
                 osr[i].PRC[j]+=tmp_r-CLIGHT*tmp_dts-(r-CLIGHT*dts[i*2]);
             } else {
-                modl[j]   =r-CLIGHT*dts[i*2]+osr[i].CPC[j];
-                modl[nf+j]=r-CLIGHT*dts[i*2]+osr[i].PRC[j];
+                modl[j]      =r-CLIGHT*dts[i*2]+osr[i].CPC[j];
+                modl[nftmp+j]=r-CLIGHT*dts[i*2]+osr[i].PRC[j];
             }
-            osr[i].p[j] = modl[nf+j];
+            osr[i].p[j] = modl[nftmp+j];
             osr[i].c[j] = modl[j];
 
 #ifdef CSSR2OSR_VRS
@@ -291,13 +347,13 @@ extern int zdres(obsd_t *obs,
             if (obs[i].SNR[f]>0.0&&testsnr(0,f,azel[i*2+1],obs[i].SNR[f]*0.25,&opt->snrmask)) {
                 trace(2,"snr error: sat=%2d f=%d el=%.2f SNR=%.2f\n",
                       sat,f,azel[i*2+1]*R2D,obs[i].SNR[f]*0.25);
+                meas[f]=meas[f+nf]=0.0;
                 continue;
             }
             meas[f   ]+=obs[i].L[f]*lam[f];
             meas[f+nf]+=obs[i].P[f];
         }
         
-        qj=selfreqpair(sat,opt,obs+i);
         for (j=0;j<2;j++) { /* for phase and code */
             for (f=0;f<nf;f++) {
                 if (meas[nf*j+f]==0.0) continue;
@@ -390,6 +446,10 @@ extern int zdres(obsd_t *obs,
 #endif
     }
 
+#ifndef CSSR2OSR_VRS
+    free(obs);
+#endif
+
 #ifdef ENA_PPP_RTK
     return nv;
 #else
@@ -406,17 +466,20 @@ extern void compensatedisp(const nav_t *nav,const int *index,
 {
     gtime_t time=obs->time;
     static gtime_t t0[MAXSAT]={0},tm[MAXSAT]={0};
-    int i,k,qi,qj,isat=sat-1,oft=isat*NFREQ;
-    static double b0[MAXSAT*NFREQ]={0},bm[MAXSAT*NFREQ]={0};
-    static double iono0[MAXSAT]={0},ionom[MAXSAT]={0},coef[MAXSAT]={0};
+    int i,k,qi,qj,isat=sat-1,oft=isat*NFREQ,oft_b;
+    static double b0[MAXSAT * (NFREQ + NEXOBS)]={0},bm[MAXSAT*(NFREQ + NEXOBS)]={0};
+    static double iono0[MAXSAT]={0},ionom[MAXSAT]={0},coef[MAXSAT*(NFREQ+NEXOBS)] = {0};
     static int slip[MAXSAT*NFREQ]={0};
     const double *lam=nav->lam[obs->sat-1];
     double disp0,dispm,dt,dgf,fi;
-    int nf=opt->nf,flag;
-    int nsig=nav->ssr[sat-1].nsig;
-    
+    int nf=opt->nf,flag,fqi,fqj;
 #ifdef CSSR2OSR_VRS
+    int nsig=nav->ssr[sat-1].nsig;
+
     nf=nsig;
+	oft_b=isat*nf;
+#else
+	oft_b=isat*NFREQ;
 #endif
 
     /* long interval */
@@ -434,31 +497,36 @@ extern void compensatedisp(const nav_t *nav,const int *index,
             if (dt<=0.0) return;
 
             for (i=0;i<nf;i++) {
-                if (b0[oft+i]==0.0||iono0[isat]==0.0) {
-                    b0[oft+i]=pb[i];iono0[isat]=iono;
+                if (b0[oft_b+i]==0.0||iono0[isat]==0.0) {
+                    b0[oft_b+i]=pb[i];iono0[isat]=iono;
                     return;
                 }
             }
 
             /* signal bias */
             for (i=0;i<nf;i++) {
-                bm[oft+i]=b0[oft+i];
-                b0[oft+i]=pb[i];
+                bm[oft_b+i]=b0[oft_b+i];
+                b0[oft_b+i]=pb[i];
             }
             /* ionosphere */
             ionom[isat]=iono0[isat];
             iono0[isat]=iono;
 
             for (i=1;i<nf;i++) {
-                qi=0;qj=i;fi=lam[qj]/lam[qi];
+                qi=0;qj=i;
+                fqi=obsfreqs[nav->ssr[isat].smode[qi]]-1;
+                fqj=obsfreqs[nav->ssr[isat].smode[qj]]-1;
+                fi=lam[fqj]/lam[fqi];
+                
                 if (pb[qi]==CSSRINVALID||pb[qj]==CSSRINVALID||iono==0.0) continue;
-                dispm=-FREQ2/FREQ1*(1.0-fi*fi)*ionom[isat]+bm[oft+qi]-bm[oft+qj];
-                disp0=-FREQ2/FREQ1*(1.0-fi*fi)*iono0[isat]+b0[oft+qi]-b0[oft+qj];
+                dispm=-FREQ2/FREQ1*(1.0-fi*fi)*ionom[isat]+bm[oft_b+qi]-bm[oft_b+qj];
+                disp0=-FREQ2/FREQ1*(1.0-fi*fi)*iono0[isat]+b0[oft_b+qi]-b0[oft_b+qj];
                 coef[isat+(i-1)*MAXSAT]=(disp0-dispm)/dt;
+
             }
         } else {
             for (i=0;i<nf;i++) {
-                b0[oft+i]=obs->L[i]*lam[i];
+                b0[oft_b+i]=obs->L[i]*lam[i];
                 slip[oft+i]=0;
             }
             tm[isat]=t0[isat];
@@ -469,8 +537,12 @@ extern void compensatedisp(const nav_t *nav,const int *index,
     dt=timediff(time,t0[isat]);
     if (opt->posopt[5]==1) {
         for  (i=1;i<nf;i++) {
-            qi=0;qj=i;fi=lam[qj]/lam[qi];
-            if (fabs(coef[isat+(i-1)*MAXSAT]/(FREQ2/FREQ1*(1.0-fi*fi)))>0.008) return;
+            qi=0;qj=i;
+            fqi=obsfreqs[nav->ssr[isat].smode[qi]]-1;
+            fqj=obsfreqs[nav->ssr[isat].smode[qj]]-1;
+            fi=lam[fqj]/lam[fqi];
+
+            if (fabs(coef[isat+(i-1)*MAXSAT]/(FREQ2/FREQ1*(1.0-fi*fi)))>0.008) continue;
             if (pbreset[qi]||pbreset[qj]) {
                 coef[isat]=0.0;
                 return;
@@ -486,7 +558,7 @@ extern void compensatedisp(const nav_t *nav,const int *index,
             qi=0;qj=i;fi=lam[qj]/lam[qi];
             if (slip[oft+qi]||slip[oft+qj]||
                     obs->L[qi]*lam[qi]==0.0||obs->L[qj]*lam[qj]==0.0||pbreset[qi]||pbreset[qj]) continue;
-            dgf=obs->L[qi]*lam[qi]-obs->L[qj]*lam[qj]-(b0[oft+qi]-b0[oft+qj]);
+            dgf=obs->L[qi]*lam[qi]-obs->L[qj]*lam[qj]-(b0[oft_b+qi]-b0[oft_b+qj]);
             compL[qi]=compL[qi]==0.0?(1.0/(1.0-SQR(fi))*dgf):compL[qi];
             compL[qj]=SQR(fi)/(1.0-SQR(fi))*dgf;
         }
@@ -502,12 +574,15 @@ extern int corrmeas(const obsd_t *obs, nav_t *nav, const double *pos,
 {
     const double *lam=nav->lam[obs->sat-1];
     double vari,dant[NFREQ+NEXOBS]={0},compL[NFREQ+NEXOBS]={0};
-    double stec=0.0,quality=0.0, rate, t5, t6;
+    double stec=0.0, rate, t5, t6;
     double pbias[NFREQ+NEXOBS]={0},cbias[NFREQ+NEXOBS]={0};
-    int i,j,sat,smode,nsig,nf=opt->nf;
+    int i,sat,smode,nsig,nf=opt->nf;
     int flag;
     double dt;
     static gtime_t currtime = {0};
+#ifndef CSSR2OSR_VRS
+	int j;
+#endif
 
     trace(3,"corrmeas: time=%s, sat=%2d\n",time_str(obs->time,0),obs->sat);
 
@@ -557,7 +632,7 @@ extern int corrmeas(const obsd_t *obs, nav_t *nav, const double *pos,
 #endif
 
     /* ionosphere correction */
-    if (!stec_grid_data(nav,index,obs->time,sat,n,weight,Gmat,Emat,&stec,&rate,&vari,&quality,brk)) {
+    if (!stec_grid_data(nav,index,obs->time,sat,n,weight,Gmat,Emat,&stec,&rate,&vari,brk)) {
         trace(2,"corrmea: iono correction error: time=%s sat=%2d ionoopt=%d\n",
               time_str(obs->time,2),obs->sat,opt->ionoopt);
         return 0;
@@ -617,8 +692,6 @@ extern int corrmeas(const obsd_t *obs, nav_t *nav, const double *pos,
     antmodel(opt->pcvr,opt->antdel[0],azel,opt->posopt[1],dant);
 
     /* ionosphere and windup corrected phase and code */
-
-     /* for (i=0;i<nf;i++) { ssr2osr用コード */
 #ifdef CSSR2OSR_VRS
     for (i=0;i<nsig;i++){
 #else
@@ -648,7 +721,9 @@ extern int corrmeas(const obsd_t *obs, nav_t *nav, const double *pos,
 extern void rtkinitppprtk(rtk_t *rtk, const prcopt_t *opt)
 {
     sol_t sol0={{0}};
+#ifndef CSSR2OSR_VRS
     ambc_t ambc0={{{0}}};
+#endif
     ssat_t ssat0={0};
     int i;
 
@@ -664,6 +739,7 @@ extern void rtkinitppprtk(rtk_t *rtk, const prcopt_t *opt)
     for (i=0;i<MAXERRMSG;i++) rtk->errbuf[i]=0;
     rtk->opt=*opt;
     rtk->sisadjust = 1;
+    clearsatcorr();
 
 #ifndef CSSR2OSR_VRS
     for (i=0;i<6;i++) rtk->rb[i]=0.0;
@@ -752,14 +828,13 @@ extern void rtkfreeppprtk(rtk_t *rtk)
 * notes  : before calling function, base station position rtk->sol.rb[] should
 *          be properly set for relative mode except for moving-baseline
 *-----------------------------------------------------------------------------*/
-extern int ssr2osr(rtk_t *rtk, const obsd_t *obs, const int n, nav_t *nav,
+extern int ssr2osr(rtk_t *rtk, obsd_t *obs, const int n, nav_t *nav,
                  osrd_t *osr, const int mode)
 
     {
     double *rs,*dts,*var,*e,*azel, *cpc_=NULL;
     gtime_t *pt0_=NULL;
-    double dt,dt_p;
-    int i,f,k=0,sat,j,nf=rtk->opt.nf,sati,ephopt;
+    int i,k=0,j,nf=rtk->opt.nf,sati;
     int svh[MAXOBS];
     float age;
     static grid_t grid;
@@ -794,8 +869,24 @@ extern int ssr2osr(rtk_t *rtk, const obsd_t *obs, const int n, nav_t *nav,
 
     grid.network = rtk->opt.netnum;
     ecef2pos(rtk->x, pos);        
-    if ((nn = get_grid_index(nav, pos, &grid, &(rtk->opt), obs[0].time, FALSE)) == 0) {
-        if (backup == FALSE || timediff(obs[0].time, (temp = GetBackupCSSRTime())) > 180.0) {
+    if ((nn = get_grid_index(nav, pos, &grid, &(rtk->opt), obs[0].time)) > 0) {
+        if (get_close_cssr(obs[0].time, grid.network) == FALSE) {
+            if (backup == FALSE || timediff(obs[0].time, (temp = get_backup_cssr_time())) > 180.0) {
+                free(rs); free(dts); free(var); free(e); free(azel);
+                rtk->sol.stat = SOLQ_SINGLE;
+                return 0;
+            } else {
+                trace(3, "use backup CSSR data: obs=%.1f, CSSR=%.1f, age=%.1f\n",
+                    time2gpst(obs[0].time, NULL), time2gpst(temp, NULL),
+                    timediff(obs[0].time, temp));
+                restore_current_cssr(obs[0].time, &grid);
+            }
+        } else {
+            backup_current_cssr(&grid);
+            backup = TRUE;
+        }
+    } else {
+        if (backup == FALSE || timediff(obs[0].time, (temp = get_backup_cssr_time())) > 180.0) {
             free(rs); free(dts); free(var); free(e); free(azel);
             rtk->sol.stat = SOLQ_SINGLE;
             return 0;
@@ -803,35 +894,27 @@ extern int ssr2osr(rtk_t *rtk, const obsd_t *obs, const int n, nav_t *nav,
             trace(3, "use backup CSSR data: obs=%.1f, CSSR=%.1f, age=%.1f\n",
                 time2gpst(obs[0].time, NULL), time2gpst(temp, NULL),
                 timediff(obs[0].time, temp));
-            RestoreCurrentCSSR(&grid);
+            restore_current_cssr(obs[0].time, &grid);
         }
-    } else {
-        if (GetCloseCSSR(obs[0].time, grid.network) == FALSE) {
-            free(rs); free(dts); free(var); free(e); free(azel);
-            rtk->sol.stat = SOLQ_SINGLE;
-            return 0;
-        }
-        BackupCurrentCSSR(&grid);
-        backup = TRUE;
     }
     
-    nav->facility = GetCurrentCSSRFacility();
-    nav->ssrtime = GetCurrentCSSRTime();
-    CheckCSSRFacility(nav, grid.network);
+    nav->facility = get_current_cssr_facility();
+    nav->ssrtime = get_current_cssr_time();
+    check_cssr_facility(nav, grid.network);
     
     if (rtk->opt.posopt[11] != 0) {
-        if (!rtk->opt.posopt[9] && IsSISAdjust()) {
+        if (!rtk->opt.posopt[9] && is_sis_adjust()) {
             rtk->sisadjust = 1;
         } else {
             rtk->sisadjust = 0;
         }
     } else {
-        rtk->sisadjust = IsSISAdjust();
+        rtk->sisadjust = is_sis_adjust();
     }
     for (i = 0; i < MAXSAT; ++i) {
-        UpdateGlobalCSSR(&nav->ssr[i], i + 1);
+        update_global_cssr(&nav->ssr[i], i + 1);
     }
-    UpdateLocalCSSR(nav);
+    update_local_cssr(nav);
 
     /* ssr age */
     rtk->sol.age=1e4;

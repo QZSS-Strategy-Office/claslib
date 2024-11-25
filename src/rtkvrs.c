@@ -240,7 +240,7 @@ static void udpos(rtk_t *rtk, const obsd_t *obs, int n,  double tt)
     }
    
     /* check variance of estimated postion */
-    for (i=0;i<3;i++) var+=rtk->P[i+i*nx]; var/=3.0;
+    for (i=0;i<3;i++) { var+=rtk->P[i+i*nx]; } var/=3.0;
     
     if (var>VAR_POS) {
         /* reset position with large variance */
@@ -668,7 +668,7 @@ static void udbias(rtk_t *rtk, double tt, const obsd_t *obs, const int *sat,
 static void udstate(rtk_t *rtk, const obsd_t *obs, int n, const int *sat,
                     const int *iu, const int *ir, int ns, const nav_t *nav)
 {
-    double tt=fabs(rtk->tt),bl,dr[3];
+    double tt=fabs(rtk->tt),bl=0.0,dr[3];
     
     trace(3,"udstate : ns=%d\n",ns);
     
@@ -724,7 +724,7 @@ static int zdres(rtk_t *rtk, int base, const obsd_t *obs, int n, const double *r
                  double *e, double *azel)
 {
     double r,rr_[3],pos[3],dant[NFREQ]={0},disp[3];
-    double zhd,zazel[]={0.0,90.0*D2R},ydif;
+    double zhd,zazel[]={0.0,90.0*D2R},ydif=0.0;
     int i,j,nf=NF(opt);
     
     trace(3,"zdres   : n=%d\n",n);
@@ -1233,7 +1233,7 @@ static void holdamb(rtk_t *rtk, const double *xa)
 static int resamb_LAMBDA(rtk_t *rtk, double *bias, double *xa)
 {
     prcopt_t *opt=&rtk->opt;
-    int i,j,ny,nb,info,nx=rtk->nx,na=rtk->na,nb_=0;
+    int i,j,ny,nb,info,nx=rtk->nx,na=rtk->na;
     double *D,*DP,*y,*Qy,*b,*db,*Qb,*Qab,*QQ,s[2];
     double *Ds,*Pac,*Pcc,*D_P;
     int nc;
@@ -1253,7 +1253,7 @@ static int resamb_LAMBDA(rtk_t *rtk, double *bias, double *xa)
         free(D);
         return 0;
     }
-    ny=na+nb; nb_=nb; y=mat(ny,1); Qy=mat(ny,ny); DP=mat(ny,nx);
+    ny=na+nb; y=mat(ny,1); Qy=mat(ny,ny); DP=mat(ny,nx);
     b=mat(nb,2); db=mat(nb,1); Qb=mat(nb,nb); Qab=mat(na,nb); QQ=mat(na,nb);
     
     nc=nx-na;Ds=mat(nc,nb); Pac=mat(na,nc); Pcc=mat(nc,nc);D_P=mat(nb,nc);
@@ -1425,42 +1425,37 @@ extern int relposvrs(rtk_t *rtk, const obsd_t *obs, int nu, int nr, nav_t *nav)
     prcopt_t *opt=&rtk->opt;
     gtime_t time=obs[0].time;
     double *rs,*dts,*var,*y,*e,*azel,*v,*H,*R,*xp,*Pp,*Qp,*xa,*bias,dt;
-    int i,j,k,f,l,n=nu+nr,ns,ny,nv,sat[MAXSAT],iu[MAXSAT],ir[MAXSAT],sati;
+    int i,j,k=0,f,l,n=nu+nr,ns=0,ny,nv=0,sat[MAXSAT],iu[MAXSAT],ir[MAXSAT],sati;
     int info,vflg[MAXOBS*NFREQ*2+1],svh[MAXOBS*2];
     int stat=rtk->opt.mode<=PMODE_DGPS?SOLQ_DGPS:SOLQ_FLOAT;
     int nf=opt->ionoopt==IONOOPT_IFLC?1:opt->nf;
     double pdop;
     int nb,isat[MAXSAT];
     double el[MAXSAT],dist;
-    static int resetcnt=0,retrycnt=-1000,cntdiffp=0,np;
+    static int resetcnt=0,cntdiffp=0,np;
     
     trace(2,"relposvrs  : time=%s nx=%d nu=%d nr=%d\n",time_str(obs[0].time,0),rtk->nx,nu,nr);
     
     regularly = (regularly.time == -1 ? obs[0].time: regularly);
-    if (nav->filreset == TRUE ||
-        (opt->regularly != 0 && timediff(obs[0].time, regularly) >= (double)opt->regularly)) {
-        double tow = time2gpst(timeget(), NULL);
-        trace(2, "ppp_rtk_pos(): reset filter, tow=%.2f, network=%d, filreset=%d\n", tow, rtk->opt.netnum, nav->filreset);
+    if (opt->regularly != 0 && timediff(obs[0].time, regularly) >= (double)opt->regularly) {
+        trace(1, "relposvrs(): regularly reset filter, tow=%.1f\n", time2gpst(obs[0].time, NULL));
         for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
-        if (nav->filreset != TRUE) { 
-            regularly = obs[0].time;
-        }
-        resetfilterflag(nav);
-        stat = SOLQ_NONE;
         rtk->sol.stat=SOLQ_SINGLE;
+        regularly = obs[0].time;
+        resetfilterflag(nav);
         resetcnt=0;
-        retrycnt=opt->retrycnt;
+        udstate(rtk,obs,n,sat,iu,ir,ns,nav);
+        return 0;
     }
-    if (retrycnt==-1000) retrycnt=opt->retrycnt;
-    if (opt->epochtoretry>0&&retrycnt>0&&rtk->sol.pstat!=1&&resetcnt==opt->epochtoretry) {
-        double tow = time2gpst(timeget(), NULL);
-        trace(1, "ppp_rtk_pos(): reset filter, tow=%.2f, network=%d\n", tow, rtk->opt.netnum);
-        for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
+    
+    if (nav->filreset == TRUE) {
+        trace(1, "relposvrs(): reset filter, tow=%.1f\n", time2gpst(obs[0].time, NULL));
+        for (i=NP(opt);i<rtk->nx;i++) rtk->x[i]=0.0;
+        rtk->sol.stat=SOLQ_FLOAT;
         resetfilterflag(nav);
         stat = SOLQ_FLOAT;
-        rtk->sol.stat=SOLQ_FLOAT;
-        --retrycnt;
         resetcnt=0;
+        udstate(rtk,obs,n,sat,iu,ir,ns,nav);
     }
     ++resetcnt;
 
@@ -1701,8 +1696,6 @@ extern int relposvrs(rtk_t *rtk, const obsd_t *obs, int nu, int nr, nav_t *nav)
         if (rtk->ssat[i].fix[j]==2&&stat!=SOLQ_FIX) rtk->ssat[i].fix[j]=1;
         if (rtk->ssat[i].slip[j]&1) rtk->ssat[i].slipc[j]++;
     }
-
-    rtk->sol.pstat=stat;
 
     free(rs); free(dts); free(var); free(y); free(e); free(azel);
     free(xp); free(Pp);  free(xa);  free(v); free(H); free(R); free(bias);

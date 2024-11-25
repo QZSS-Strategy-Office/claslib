@@ -36,8 +36,6 @@
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
-static const char rcsid[]="$Id:$";
-
 /* constants and macros ------------------------------------------------------*/
 
 #define PRUNIT_GPS  299792.458          /* rtcm 3 unit of gps pseudorange (m) */
@@ -1415,7 +1413,7 @@ static int encode_ssr1(rtcm_t *rtcm, int sys, int sync)
 static int encode_ssr2(rtcm_t *rtcm, int sys, int sync)
 {
     double udint=0.0;
-    int i,j,iod=0,nsat,prn,np,offp,iode,dclk[3];
+    int i,j,iod=0,nsat,prn,np,offp,dclk[3];
     
     trace(3,"encode_ssr2: sys=%d sync=%d\n",sys,sync);
     
@@ -1440,8 +1438,6 @@ static int encode_ssr2(rtcm_t *rtcm, int sys, int sync)
     
     for (j=0;j<MAXSAT;j++) {
         if (satsys(j+1,&prn)!=sys||!rtcm->ssr[j].update) continue;
-        
-        iode=rtcm->ssr[j].iode;
         
         dclk[0]=ROUND(rtcm->ssr[j].dclk[0]/1E-4);
         dclk[1]=ROUND(rtcm->ssr[j].dclk[1]/1E-6);

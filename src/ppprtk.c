@@ -61,8 +61,6 @@
 #define MAXPBCORSSR 20.0            /* max phase bias correction of ssr (m) */
 #define CSSRINVALID -10000          /* invalid value */
 
-static const double sfi[4]={FREQ2/FREQ1,FREQ1/FREQ2,1.0-SQR(FREQ1/FREQ2),FREQ2/FREQ1-FREQ1/FREQ2};
-
 /*  The F inverse distribution function */
 static const double qf[6][60] = {
  /* significance level, alpha=0.001(0.1%) */
@@ -181,31 +179,11 @@ static void initx(rtk_t *rtk, double xi, double var, int i)
         rtk->P[i+j*rtk->nx]=rtk->P[j+i*rtk->nx]=i==j?var:0.0;
     }
 }
-extern int selfreqpair(const int sat, const prcopt_t *opt,const obsd_t *obs)
-{
-    int optf=opt->posopt[10];
-    if (NFREQ==1||optf==POSL1) {
-         return 0;
-    }else {
-        if ((satsys(sat,NULL))&(SYS_GAL)) {/* GAL */
-            if(obs->L[2]!=0.0||obs->P[2]!=0.0) return 2; 
-            return 0; 
-        }
-        if (optf==POSL1L2L5) return 1+2;
-        if (optf==POSL1L5) return 2;
-        if (optf==POSL1L5_L2&&obs->L[2]!=0.0&&obs->P[2]!=0.0) return 2;
-        if (optf==POSL1L2) {
-             if (obs->L[1]!=0.0||obs->P[1]!=0.0) return 1;
-             return 0;
-        }
-        return 1;
-    }
-}
 /* temporal update of position -----------------------------------------------*/
 static void udpos_ppp(rtk_t *rtk, const obsd_t *obs, int n,  double tt)
 {
     double *F,*FP,*xp,pos[3],Q[9]={0},Qv[9],var=0.0;
-    int i, j, na,nb,nx,flag_init=0;
+    int i, j, na,nb,nx;
     double *Fx,*Pxx,*Pxi,*Pxb,*Pxi_,*Pxb_,*xp_,ki;
     int ni;
     
@@ -226,7 +204,7 @@ static void udpos_ppp(rtk_t *rtk, const obsd_t *obs, int n,  double tt)
             for (i=3;i<6;i++) initx(rtk,rtk->sol.rr[i],VAR_VEL,i);
             for (i=6;i<9;i++) initx(rtk,1E-6,VAR_ACC,i);
         }
-        flag_init=1;
+        return;
     }
 
     /* check variance of estimated postion */
@@ -317,17 +295,12 @@ static void udpos_ppp(rtk_t *rtk, const obsd_t *obs, int n,  double tt)
         for (i=0;i<3;i++) for (j=0;j<3;j++) {
             rtk->P[i+6+(j+6)*nx]+=Qv[i+j*3];
         }
-        if (rtk->opt.prnadpt&&flag_init==0) {
-            for (i=0;i<9;i++) for (j=0;j<9;j++) {
-                rtk->P[i+j*nx]+=rtk->Q[i+j*nx]*fabs(tt);
-            }
-        }
     } else {
         /* process noise added to only position */
         Q[0]=Q[4]=SQR(rtk->opt.prn[5])*fabs(tt); Q[8]=SQR(rtk->opt.prn[6])*fabs(tt);
         ecef2pos(rtk->x,pos);
         covecef(pos,Q,Qv);
-        if (rtk->opt.prnadpt==0||flag_init) {
+        if (rtk->opt.prnadpt==0) {
             for (i=0;i<3;i++) for (j=0;j<3;j++) {
                 rtk->P[i+j*nx]+=Qv[i+j*3];
             }
@@ -380,6 +353,7 @@ static void udion(rtk_t *rtk, double tt, double bl, const obsd_t *obs, int ns)
         for (k=0;k<ns;k++) {
             if (obs[k].sat==i) break;
         }
+        if (ns == k) continue;
         m=selfreqpair(i,&rtk->opt,obs+k);
         for (f=0;f<rtk->opt.nf;f++) {
             if (f>0&&!(f&m)) continue;
@@ -1226,14 +1200,14 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
     static gtime_t pt0[MAXSAT]={0};
     double cpc_[MAXSAT*NFREQ],dist;
     gtime_t pt0_[MAXSAT];
-    static int resetcnt=0,retrycnt=-1000,cntdiffp=0,np;
+    static int resetcnt=0,cntdiffp=0,np;
     double pdop;
     static int backup = FALSE;
     double pos[3];
     gtime_t temp;
     int nn;
 
-    trace(2,"ppp_rtk_pos   : time=%s nx=%d n=%d filreset=%d prevstat=%d\n",time_str(obs[0].time,0),rtk->nx,n,nav->filreset,rtk->sol.pstat);
+    trace(2,"ppp_rtk_pos   : time=%s nx=%d n=%d filreset=%d\n",time_str(obs[0].time,0),rtk->nx,n,nav->filreset);
 
     rs=mat(6,n); dts=mat(2,n); var=mat(1,n); azel=zeros(2,n);
 
@@ -1253,14 +1227,65 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
     if (rtk->tt>opt->maxobsloss) {
         for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
     }
+
+    regularly = (regularly.time == -1 ? obs[0].time: regularly);
+    if (opt->regularly != 0 && timediff(obs[0].time, regularly) >= (double)opt->regularly) {
+        trace(1, "ppp_rtk_pos(): regularly reset filter, tow=%.1f, network=%d\n", time2gpst(obs[0].time, NULL), grid.network);
+        for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
+        rtk->sol.stat=SOLQ_SINGLE;
+        regularly = obs[0].time;
+        resetfilterflag(nav);
+        clear_current_cssr();
+        resetcnt=0;
+        free(rs); free(dts); free(var); free(y) ; free(e); free(azel);
+        return;
+    }
     
+    if (nav->filreset == TRUE) {
+        trace(1, "ppp_rtk_pos(): reset filter, tow=%.1f, network=%d\n", time2gpst(obs[0].time, NULL), grid.network);
+        if (rtk->opt.dynamics) {
+            for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
+        } else {
+            for (i=NP(opt);i<rtk->nx;i++) rtk->x[i]=0.0;
+        }
+        rtk->sol.stat=SOLQ_FLOAT;
+        resetfilterflag(nav);
+        stat = SOLQ_FLOAT;
+        resetcnt=0;
+    }
+    
+    if (nav->ionoreset == TRUE) {
+        trace(2, "ppp_rtk_pos(): change grid, tow=%.1f, network=%d\n", time2gpst(obs[0].time, NULL), grid.network);
+        for (i = 1; i <= MAXSAT; ++i) {
+            rtk->x[II(i,opt)] = 0.0;
+        }
+        nav->ionoreset = FALSE;
+    }
+    ++resetcnt;
+
     /* temporal update of states */
     udstate_ppp(rtk,obs,n,nav);
 
     grid.network = opt->netnum;
     ecef2pos(rtk->x, pos);
-    if ((nn = get_grid_index(nav, pos, &grid, opt, obs[0].time, FALSE)) == 0) {
-        if (backup == FALSE || timediff(obs[0].time, (temp = GetBackupCSSRTime())) > 180.0) {
+    if ((nn = get_grid_index(nav, pos, &grid, opt, obs[0].time)) > 0) {
+        if (get_close_cssr(obs[0].time, grid.network) == FALSE) {
+            if (backup == FALSE || timediff(obs[0].time, (temp = get_backup_cssr_time())) > 180.0) {
+                free(rs); free(dts); free(var); free(y); free(e); free(azel);
+                rtk->sol.stat = SOLQ_SINGLE;
+                return;
+            } else {
+                trace(3, "use backup CSSR data: obs=%.1f, CSSR=%.1f, age=%.1f\n",
+                    time2gpst(obs[0].time, NULL), time2gpst(temp, NULL),
+                    timediff(obs[0].time, temp));
+                restore_current_cssr(obs[0].time, &grid);
+            }
+        } else {
+            backup_current_cssr(&grid);
+            backup = TRUE;
+        }
+    } else {
+        if (backup == FALSE || timediff(obs[0].time, (temp = get_backup_cssr_time())) > 180.0) {
             free(rs); free(dts); free(var); free(y); free(e); free(azel);
             rtk->sol.stat = SOLQ_SINGLE;
             return;
@@ -1268,79 +1293,28 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
             trace(3, "use backup CSSR data: obs=%.1f, CSSR=%.1f, age=%.1f\n",
                 time2gpst(obs[0].time, NULL), time2gpst(temp, NULL),
                 timediff(obs[0].time, temp));
-            RestoreCurrentCSSR(&grid);
+            restore_current_cssr(obs[0].time, &grid);
         }
-    } else {
-        if (GetCloseCSSR(obs[0].time, grid.network) == FALSE) {
-            free(rs); free(dts); free(var); free(y); free(e); free(azel);
-            rtk->sol.stat = SOLQ_SINGLE;
-            return;
-        }
-        BackupCurrentCSSR(&grid);
-        backup = TRUE;
     }
-    
-    nav->facility = GetCurrentCSSRFacility();
-    nav->ssrtime = GetCurrentCSSRTime();
-    CheckCSSRFacility(nav, grid.network);
+
+    nav->facility = get_current_cssr_facility();
+    nav->ssrtime = get_current_cssr_time();
+    check_cssr_facility(nav, grid.network);
     
     if (opt->posopt[11] != 0) {
-        if (!opt->posopt[9] && IsSISAdjust()) {
+        if (!opt->posopt[9] && is_sis_adjust()) {
             rtk->sisadjust = 1;
         } else {
             rtk->sisadjust = 0;
         }
     } else {
-        rtk->sisadjust = IsSISAdjust();
+        rtk->sisadjust = is_sis_adjust();
     }
     for (i = 0; i < MAXSAT; ++i) {
-        UpdateGlobalCSSR(&nav->ssr[i], i + 1);
+        update_global_cssr(&nav->ssr[i], i + 1);
     }
-    UpdateLocalCSSR(nav);
+    update_local_cssr(nav);
 
-    
-    regularly = (regularly.time == -1 ? obs[0].time: regularly);
-    if (opt->regularly != 0 && timediff(obs[0].time, regularly) >= (double)opt->regularly) {
-        double tow = time2gpst(timeget(), NULL);
-        trace(1, "ppp_rtk_pos(): reset filter, tow=%.2f, network=%d\n", tow, rtk->opt.netnum);
-        for (i=NP(opt);i<rtk->nx;i++) rtk->x[i]=0.0;
-        regularly = obs[0].time;
-        resetfilterflag(nav);
-        stat = SOLQ_NONE;
-        rtk->sol.stat=SOLQ_SINGLE;
-        ClearCurrentCSSR();
-        retrycnt=opt->retrycnt;
-        resetcnt=0;
-        udstate_ppp(rtk,obs,n,nav);
-        free(rs); free(dts); free(var); free(y); free(e); free(azel);
-        return;
-    }
-    if (nav->filreset == TRUE ||
-        (opt->epochtoretry>0&&retrycnt>0&&rtk->sol.pstat!=1&&resetcnt==opt->epochtoretry)) {
-        double tow = time2gpst(timeget(), NULL);
-        trace(1, "ppp_rtk_pos(): reset filter, tow=%.2f, network=%d, filreset=%d\n", tow, rtk->opt.netnum, nav->filreset);
-        for (i=NP(opt);i<rtk->nx;i++) rtk->x[i]=0.0;
-        resetfilterflag(nav);
-        stat = SOLQ_FLOAT;
-        rtk->sol.stat=SOLQ_FLOAT;
-        if (nav->filreset == TRUE) {
-            retrycnt=opt->retrycnt;
-        } else {
-            --retrycnt;
-        }
-        resetcnt=0;
-        udstate_ppp(rtk,obs,n,nav);
-    }
-    
-    if (nav->ionoreset == TRUE) {
-        trace(2, "change select network or grid: tow=%.1f\n", time2gpst(obs[0].time, NULL));
-        for (i = 1; i <= MAXSAT; ++i) {
-            rtk->x[II(i,opt)] = 0.0;
-        }
-        udstate_ppp(rtk, obs, n, nav);
-        nav->ionoreset = FALSE;
-    }
-    ++resetcnt;
     trace(4,"x(0)="); tracemat(4,rtk->x,1,NR(opt),13,4);
 
     /* satellite positions and clocks */
@@ -1389,6 +1363,7 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
             matcpy(Pp,rtk->P,rtk->nx,rtk->nx);
             if ((info=filter2(rtk,xp,Pp,Qp,H,v,R,rtk->nx,nv,vflg,0))!=0) {
                 trace(2,"ppp-rtk filter error %s info=%d\n",time_str(rtk->sol.time,0),info);
+                if (i==(rtk->opt.niter-1) && k==(MAXREF-1)) stat=SOLQ_NONE;
                 continue;
             }
             /* postfit residuals of float solution */
@@ -1399,7 +1374,7 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
                 if (rtk->sol.chisq<100.0) break;
             }
             matcpy(xp,rtk->x,rtk->nx,1);
-            if (k==(MAXREF-1)) {
+            if (i==(rtk->opt.niter-1) && k==(MAXREF-1)) {
                 stat=SOLQ_NONE;
                 trace(2,"measurement update failed \n");
             }
@@ -1466,6 +1441,7 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
             double ratio=0.0;
             elsort(rtk,obs,isat,el,n);
             for (l=0;l<rtk->opt.armaxdelsat;l++) {
+                ratio=0.0;
                 for (i=0;i<n;i++) {
                     sati = isat[i];
                     if (el[i]<=rtk->opt.elmaskar) continue;
@@ -1578,7 +1554,11 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
     else rtk->sol.stat=SOLQ_SINGLE;
 
     if (stat==SOLQ_NONE) {
-        for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
+        if (rtk->opt.dynamics) {
+            for (i=0;i<rtk->nx;i++) rtk->x[i]=0.0;
+        } else {
+            for (i=NP(opt);i<rtk->nx;i++) rtk->x[i]=0.0;
+        }
     }
     
     for (l=0;l<MAXSAT;l++) {
@@ -1586,7 +1566,6 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
         for (f=0;f<NFREQ;f++) cpc[l*NFREQ+f]=cpc_[l*NFREQ+f];
     }
     
-    rtk->sol.pstat=stat;
     dops(n,azel,opt->elmin,rtk->sol.dop); /* {GDOP,PDOP,HDOP,VDOP} */
 
     free(rs); free(dts); free(var); free(y) ; free(e); free(azel);

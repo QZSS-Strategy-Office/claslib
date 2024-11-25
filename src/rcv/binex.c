@@ -33,11 +33,6 @@
 
 #define MIN(x,y)    ((x)<(y)?(x):(y))
 
-/* ura table -----------------------------------------------------------------*/
-static const double ura_eph[]={
-    2.4,3.4,4.85,6.85,9.65,13.65,24.0,48.0,96.0,192.0,384.0,768.0,1536.0,
-    3072.0,6144.0,0.0
-};
 /* get fields (big-endian) ---------------------------------------------------*/
 #define U1(p) (*((unsigned char *)(p)))
 #define I1(p) (*((signed char *)(p)))
@@ -121,13 +116,6 @@ static gtime_t adjday(gtime_t time, double tod)
     else if (tod>tod_p+43200.0) tod-=86400.0;
     ep[3]=ep[4]=ep[5]=0.0;
     return timeadd(epoch2time(ep),tod);
-}
-/* ura value (m) to ura index ------------------------------------------------*/
-static int uraindex(double value)
-{
-    int i;
-    for (i=0;i<15;i++) if (ura_eph[i]>=value) break;
-    return i;
 }
 /* decode binex mesaage 0x00-00: comment -------------------------------------*/
 static int decode_bnx_00_00(raw_t *raw, unsigned char *buff, int len)
@@ -576,76 +564,6 @@ static int decode_bnx_01_03(raw_t *raw, unsigned char *buff, int len)
     }
     raw->nav.seph[prn-MINPRNSBS]=seph;
     raw->ephsat=seph.sat;
-    return 2;
-}
-/* decode binex mesaage 0x01-04: decoded galileo ephmemeris ------------------*/
-static int decode_bnx_01_04(raw_t *raw, unsigned char *buff, int len)
-{
-    eph_t eph={0};
-    unsigned char *p=buff;
-    double tow,ura,sqrtA;
-    int prn;
-    
-    trace(4,"binex 0x01-04: len=%d\n",len);
-    
-    if (len>=127) {
-        prn       =U1(p)+1;      p+=1;
-        eph.week  =U2(p);        p+=2; /* gal-week = gps-week */
-        tow       =I4(p);        p+=4;
-        eph.toes  =I4(p);        p+=4;
-        eph.tgd[0]=R4(p);        p+=4; /* BGD E5a/E1 */
-        eph.tgd[1]=R4(p);        p+=4; /* BGD E5b/E1 */
-        eph.iode  =I4(p);        p+=4; /* IODnav */
-        eph.f2    =R4(p);        p+=4;
-        eph.f1    =R4(p);        p+=4;
-        eph.f0    =R4(p);        p+=4;
-        eph.deln  =R4(p)*SC2RAD; p+=4;
-        eph.M0    =R8(p);        p+=8;
-        eph.e     =R8(p);        p+=8;
-        sqrtA     =R8(p);        p+=8;
-        eph.cic   =R4(p);        p+=4;
-        eph.crc   =R4(p);        p+=4;
-        eph.cis   =R4(p);        p+=4;
-        eph.crs   =R4(p);        p+=4;
-        eph.cuc   =R4(p);        p+=4;
-        eph.cus   =R4(p);        p+=4;
-        eph.OMG0  =R8(p);        p+=8;
-        eph.omg   =R8(p);        p+=8;
-        eph.i0    =R8(p);        p+=8;
-        eph.OMGd  =R4(p)*SC2RAD; p+=4;
-        eph.idot  =R4(p)*SC2RAD; p+=4;
-        ura       =R4(p);        p+=4;
-        eph.svh   =U2(p);        p+=2;
-        eph.code  =U2(p);              /* data source */
-    }
-    else {
-        trace(2,"binex 0x01-04: length error len=%d\n",len);
-        return -1;
-    }
-    if (!(eph.sat=satno(SYS_GAL,prn))) {
-        trace(2,"binex 0x01-04: satellite error prn=%d\n",prn);
-        return -1;
-    }
-    eph.A=sqrtA*sqrtA;
-    eph.iodc=eph.iode;
-    eph.toe=gpst2time(eph.week,eph.toes);
-    eph.toc=gpst2time(eph.week,eph.toes);
-    eph.ttr=adjweek(eph.toe,tow);
-    if (ura < 0) {
-        /*  -(SISA index + 1) for SISA index = 0-255 */
-        eph.sva=-(ura + 1);
-    }
-    else {
-        /* accuracy in distance in meters for SISA index = 0-125 */
-        eph.sva=ura_index(ura,SYS_GAL);
-    }
-
-    if (!strstr(raw->opt,"-EPHALL")) {
-        if (raw->nav.eph[eph.sat-1].iode==eph.iode&&
-            raw->nav.eph[eph.sat-1].iodc==eph.iodc) return 0; /* unchanged */
-    }
-    raw->nav.eph[eph.sat-1]=eph;
-    raw->ephsat=eph.sat;
     return 2;
 }
 /* beidou signed 10 bit tgd -> sec -------------------------------------------*/
@@ -1490,26 +1408,6 @@ static int add_seph(nav_t *nav, const seph_t *seph)
     }
     nav->seph[nav->ns++]=*seph;
     return 1;
-}
-/* set system mask -----------------------------------------------------------*/
-static int set_sysmask(const char *opt)
-{
-    const char *p;
-    int mask=SYS_NONE;
-    
-    if (!(p=strstr(opt,"-SYS="))) return SYS_ALL;
-    
-    for (p+=5;*p&&*p!=' ';p++) {
-        switch (*p) {
-            case 'G': mask|=SYS_GPS; break;
-            case 'R': mask|=SYS_GLO; break;
-            case 'E': mask|=SYS_GAL; break;
-            case 'J': mask|=SYS_QZS; break;
-            case 'C': mask|=SYS_CMP; break;
-            case 'S': mask|=SYS_SBS; break;
-        }
-    }
-    return mask;
 }
 static int readbnxfp(FILE *fp, gtime_t ts, gtime_t te, double tint,
                      const char *opt, int flag, int index, char *type,

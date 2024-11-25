@@ -27,8 +27,10 @@
 
 extern double prectrop(gtime_t time, const double *pos, const double *azel,
                        const prcopt_t *opt, const double zwd, double ztd);
+extern int selfreqpair(const int sat, const prcopt_t *opt,const obsd_t *obs);
+
 #ifndef CSSR2OSR_VRS
-extern int zdres(const obsd_t *obs,
+extern int zdres(const obsd_t *obs_org,
 #else
 extern int zdres(obsd_t *obs,
 #endif

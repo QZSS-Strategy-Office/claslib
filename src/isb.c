@@ -83,14 +83,14 @@ static int readisbf(const char *file, nav_t *nav)
 	char stationname0[21]={0};
 	char stationname_base[21]={0};
 	char stationname0_base[21]={0};
-	isb_t data={{0}};
+	isb_t data={0};
     int nbuf = 0;
     int freq = 0;
     char type = '\0';
     int n = 0;
     int ifreq = 0;
 	int itype = 0; /* =0:phase,1:code*/
-	int ver;
+	int ver=-1;
 
 	trace(3,"readisbf: file=%s\n",file);
 
@@ -416,8 +416,6 @@ extern int readL2C(const char *file, nav_t *nav){
 	char buff[1024],ori[32]="Quarter-Cycle Phase Shifts Table";
 	int countheader=1, nod=0;
 	int lenBuf = 0;
-	const int nType = 20;
-	const int nBias = 22;
 
 	trace(3,"readL2C: file=%s\n",file);
 

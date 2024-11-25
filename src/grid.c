@@ -51,16 +51,16 @@ extern int add_data_trop(zwd_t *z, gtime_t time, double zwd, double ztd,
     
     return 1;
 }
-typedef struct _GridInfo {
+typedef struct _grid_info {
     double pos[3];
     double weight;
     int network;
     int index;
-} GridInfo;
+} grid_info;
 int gridsel = 2;
 
 
-static int PickupCandidatesOfCSSRGrid(int network, const double *pos, GridInfo *gridinfo)
+static int pickup_candidates_of_grid(grid_info *gridinfo, const int network, const double *pos)
 {
     int start = (network > 0 ? network: 1), end = (network > 0 ? network + 1: CSSR_MAX_NETWORK);
     int inet, i, j, k, n = 0;
@@ -71,7 +71,7 @@ static int PickupCandidatesOfCSSRGrid(int network, const double *pos, GridInfo *
             if (fabs(-1.0 - clas_grid[inet][i][0]) < 0.0001 && fabs(-1.0 - clas_grid[inet][i][1]) < 0.0001 && fabs(-1.0 - clas_grid[inet][i][2]) < 0.0001) {
                 break;
             }
-            if (fabs(clas_grid[inet][i][2]) > 0.0001) {
+            if (fabs(clas_grid[inet][i][2]) > 0.0001 || grid_stat[inet][i] == FALSE) {
                 continue;
             }
             
@@ -117,11 +117,11 @@ static int PickupCandidatesOfCSSRGrid(int network, const double *pos, GridInfo *
     return n;
 }
 
-static int FindGridSurroundPos(GridInfo **gridindex, int n, GridInfo *gridinfo)
+static int find_grid_surround_pos(grid_info **gridindex, int n, grid_info *gridinfo)
 {
     int first_index = (gridinfo[1].network == gridinfo[2].network && gridinfo[0].network != gridinfo[1].network ? 1 : 0);
     double dd12[2], dd13[2], dd14[2];
-    GridInfo *grid2, *grid3;
+    grid_info *grid2=NULL, *grid3=NULL;
     int flag, i;
     
     for (i = 1, gridindex[0] = &gridinfo[first_index], flag = FALSE; i < n; ++i) {
@@ -141,7 +141,8 @@ static int FindGridSurroundPos(GridInfo **gridindex, int n, GridInfo *gridinfo)
     }
     
     for (i = 1, flag = FALSE; i < n; i++) {
-        if (gridindex[1]->index == gridinfo[i].index || gridinfo[first_index].network != gridinfo[i].network) {
+        if (gridindex[1]->index == gridinfo[i].index || gridinfo[first_index].network != gridinfo[i].network || 
+            first_index == i) {
             continue;
         }
         dd13[0] = gridinfo[i].pos[0]*D2R - gridinfo[first_index].pos[0]*D2R;
@@ -160,7 +161,8 @@ static int FindGridSurroundPos(GridInfo **gridindex, int n, GridInfo *gridinfo)
     }
     
     for (i = 1, flag = FALSE; i < n; i++) {
-        if (gridindex[1]->index == gridinfo[i].index || gridindex[2]->index == gridinfo[i].index || gridinfo[first_index].network != gridinfo[i].network) {
+        if (gridindex[1]->index == gridinfo[i].index || gridindex[2]->index == gridinfo[i].index || 
+            gridinfo[first_index].network != gridinfo[i].network || first_index == i) {
             continue;
         }
         dd14[0] = gridinfo[i].pos[0]*D2R - gridinfo[first_index].pos[0]*D2R;
@@ -185,7 +187,7 @@ static int FindGridSurroundPos(GridInfo **gridindex, int n, GridInfo *gridinfo)
     return n;
 }
 
-static void Calculation3PointsWeight(double *weight, const double *pos, GridInfo **gridindex)
+static void calc_3points_weight(double *weight, const double *pos, grid_info **gridindex)
 {
     double *U, *E, dd[2];
     int i;
@@ -211,7 +213,7 @@ static void Calculation3PointsWeight(double *weight, const double *pos, GridInfo
     weight[2] = dd[1];
 }
 
-static int IsExistsInside(const double *pos, int n, GridInfo **gridindex, int rtcmmode, GridInfo *nearestgrid)
+static int is_exists_inside(const double *pos, int n, grid_info **gridindex, int rtcmmode, grid_info *nearestgrid)
 {
     int flag = 0xff;
     
@@ -233,43 +235,7 @@ static int IsExistsInside(const double *pos, int n, GridInfo **gridindex, int rt
     return n;
 }
 
-static int CheckGridStatus(gtime_t obstime, int n, GridInfo **gridindex, int rtcmmode)
-{
-    int valid = (n == 4 ? 0x0f: (n == 3 ? 0x07: 0x01));
-    int flag, change=0, i, j;
-    GridInfo *temp[4];
-    
-    for (i = j = 0, flag = 0x00; i < n; ++i) {
-        if (CheckGridData(obstime, gridindex[i]->network, gridindex[i]->index) == TRUE) {
-            temp[j++] = gridindex[i];
-            flag |= (1 << i);
-        }
-    }
-    
-    if (flag != valid && flag > 0x00) {
-        switch (rtcmmode) {
-        case RTCMMODE_CSSR:
-            change = (timediff(obstime, GetBackupCSSRTime()) < SSRVALIDAGE ? FALSE: TRUE);
-            break;
-        default:
-            break;
-        }
-        if (change && temp[0]->weight < 60000.0) {    /* need option ? */
-            trace(2, "change to the nearest grid: inet=%d, index=%d, pos=%6.3f %6.3f %6.3f, distance=%.2fKm\n",
-                temp[0]->network, temp[0]->index, temp[0]->pos[0], temp[0]->pos[1], temp[0]->pos[2],
-                temp[0]->weight / 1000.0);
-                gridindex[0] = temp[0];
-                return 1;
-        } else {
-            return 0;
-        }
-    } else if (flag == 0x00) {
-        return 0;
-    }
-    return n;
-}
-
-static void CalculationGridWeight(double *weight, const double *pos, int n, GridInfo **gridindex)
+static void calc_grid_weight(double *weight, const double *pos, int n, grid_info **gridindex)
 {
     double sum;
     int i;
@@ -279,11 +245,11 @@ static void CalculationGridWeight(double *weight, const double *pos, int n, Grid
         for (i=0;i<n;i++) sum += 1.0/gridindex[i]->weight;
         for (i=0;i<n;i++) weight[i] = 1.0/(gridindex[i]->weight*sum);
     } else {
-        Calculation3PointsWeight(weight, pos, gridindex);
+        calc_3points_weight(weight, pos, gridindex);
     }
 }
 
-static void OutputSelectedGrid(const double *pos, int n, GridInfo **gridindex, double *weight, const nav_t *nav)
+static void output_selected_grid(const double *pos, int n, grid_info **gridindex, double *weight, const nav_t *nav)
 {
     static int savenetwork[4];
     static int saveindex[4];
@@ -331,10 +297,10 @@ static void OutputSelectedGrid(const double *pos, int n, GridInfo **gridindex, d
 * return : 
 * notes  :
 *-----------------------------------------------------------------------------*/
-extern int get_grid_index(const nav_t *nav, const double *pos, grid_t *grid, prcopt_t *opt, gtime_t obstime, int selectflag)
+extern int get_grid_index(nav_t *nav, double *pos, grid_t *grid, prcopt_t *opt, gtime_t obstime)
 {
-    static GridInfo gridinfo[MAX_GRID_CASHE];
-    static GridInfo *gridindex[4];
+    static grid_info gridinfo[MAX_GRID_CASHE];
+    static grid_info *gridindex[4];
     double dlat, dlon;
     int i, n = 0;
 
@@ -343,7 +309,7 @@ extern int get_grid_index(const nav_t *nav, const double *pos, grid_t *grid, prc
     if (gridsel >= 2) {
         switch (nav->rtcmmode) {
         case RTCMMODE_CSSR:
-            n = PickupCandidatesOfCSSRGrid(grid->network, pos, gridinfo);
+            n = pickup_candidates_of_grid(gridinfo, grid->network, pos);
             break;
         default:
             break;
@@ -352,7 +318,7 @@ extern int get_grid_index(const nav_t *nav, const double *pos, grid_t *grid, prc
     
     if (n >= 3 && gridinfo[0].network <= 12) {
         if (opt->gridsel == 0 || gridinfo[0].weight > (double)opt->gridsel) {
-            n = FindGridSurroundPos(&gridindex[0], n, gridinfo);
+            n = find_grid_surround_pos(&gridindex[0], n, gridinfo);
         } else {
             gridindex[0] = &gridinfo[0];
             n = 1;
@@ -366,14 +332,9 @@ extern int get_grid_index(const nav_t *nav, const double *pos, grid_t *grid, prc
         n = 1;
     }
 
-    n = IsExistsInside(pos, n, &gridindex[0], nav->rtcmmode, &gridinfo[0]);
-    if (!(n = CheckGridStatus(obstime, n, &gridindex[0], nav->rtcmmode))) {
-        trace(2, "can't select valid grid: tow=%.1f\n", time2gpst(obstime, NULL));
-        return 0;
-    }
-
-    CalculationGridWeight(grid->weight, pos, n, &gridindex[0]);
-    OutputSelectedGrid(pos, n, gridindex, grid->weight, nav);
+    n = is_exists_inside(pos, n, &gridindex[0], nav->rtcmmode, &gridinfo[0]);
+    calc_grid_weight(grid->weight, pos, n, &gridindex[0]);
+    output_selected_grid(pos, n, gridindex, grid->weight, nav);
 
     if (n == 4) {
         double *U=mat(n,n);
@@ -454,7 +415,7 @@ extern int trop_data(zwd_t *z, gtime_t time, double *ztd, double *zwd,
 extern int stec_grid_data(const nav_t *nav, const int *index, gtime_t time,
                           int sat, int n, const double *weight,
                           const double *Gmat, const double *Emat, double *iono,
-                          double *rate, double *var, double *quality, int *brk)
+                          double *rate, double *var, int *brk)
 {
     int i,slip;
     double *ionos,*rates,*rms,*quals;
@@ -499,14 +460,12 @@ extern int stec_grid_data(const nav_t *nav, const int *index, gtime_t time,
             *iono=dot(Emat,ionos_,4);
             *rate=dot(Emat,rates_,4);
             *var =dot(Emat,sqrms_,4);
-            *quality=dot(Emat,quals_,4);
         } else {
             /* weight */
             for (i=0;i<n;i++) {
                 *iono+=ionos[i]*weight[i];
                 *rate+=rates[i]*weight[i];
                 *var+=SQR(rms[i])*weight[i];
-                *quality+=quals[i]*weight[i];
             }
         }
     }
@@ -519,10 +478,9 @@ extern int stec_grid_data(const nav_t *nav, const int *index, gtime_t time,
 
 extern int trop_grid_data(const nav_t *nav, const int *index, gtime_t time,
                           int n, const double *weight, const double *Gmat,
-                          const double *Emat, double *zwd, double *ztd,
-                          double *quality, int *tbrk)
+                          const double *Emat, double *zwd, double *ztd, int *tbrk)
 {
-    int i,*valid,valid_=0;
+    int i,*valid,valid_=0,ret=0;
     double *zwds,*ztds,*zwds_,*ztds_,*quals,*quals_;
     
     if (n<=0) return 0;
@@ -530,11 +488,9 @@ extern int trop_grid_data(const nav_t *nav, const int *index, gtime_t time,
     zwds=mat(n,1);ztds=mat(n,1);quals=mat(n,1);valid=imat(n,1);
 
     if (n == 1) {
-        if (!trop_data(nav->zwd+index[0],time,ztd,zwd,quals,index[0],valid)) {
-            free(zwds);free(ztds);free(quals);free(valid);
-            return 0;
-        }
-        return 1;
+        ret=trop_data(nav->zwd+index[0],time,ztd,zwd,quals,index[0],valid);
+        free(zwds);free(ztds);free(quals);free(valid);
+        return ret;
     } else {
         for (i=0;i<n;i++) { /* for each grid */
             /* search stec data */
@@ -545,7 +501,7 @@ extern int trop_grid_data(const nav_t *nav, const int *index, gtime_t time,
         }
     }
 
-    *zwd=*ztd=*quality=0.0;
+    *zwd=*ztd=0.0;
 
     if (n==4&&Gmat&&Emat) {
         zwds_=mat(n,1);ztds_=mat(n,1);quals_=mat(n,1);
@@ -555,14 +511,12 @@ extern int trop_grid_data(const nav_t *nav, const int *index, gtime_t time,
         matmul("NN",n,1,n,1.0,Gmat,quals,0.0,quals_);
         *ztd=dot(Emat,ztds_,4);
         *zwd=dot(Emat,zwds_,4);
-        *quality=dot(Emat,quals_,4);
         free(zwds_);free(ztds_);free(quals_);
     } else {
         /* weight */
         for (i=0;i<n;i++) {
             *zwd+=zwds[i]*weight[i];
             *ztd+=ztds[i]*weight[i];
-            *quality+=quals[i]*weight[i];
         }
     }
     for (i=0;i<n;i++) valid_+=valid[i];

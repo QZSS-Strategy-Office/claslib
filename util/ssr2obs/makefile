@@ -40,10 +40,9 @@ SRCS  = rtkcmn.c rinex.c rtkpos.c postpos.c solution.c lambda.c geoid.c sbas.c \
 SRCS += stec.c
 SRCS += isb.c
 SRCS += grid.c cssr.c
-SRCS += cssr2osr.c ppprtk.c
+SRCS += cssr2osr.c
 
-RCV_SRCS = binex.c gw10.c novatel.c skytraq.c ublox.c crescent.c javad.c nvs.c \
-		   ss2.c rt17.c
+RCV_SRCS = binex.c novatel.c ublox.c
 
 OBJS = $(SRCS:.c=.o)
 RCV_OBJS = $(RCV_SRCS:.c=.o)

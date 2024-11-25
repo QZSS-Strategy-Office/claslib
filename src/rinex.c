@@ -84,8 +84,6 @@
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
-static const char rcsid[]="$Id:$";
-
 /* constants/macros ----------------------------------------------------------*/
 
 #define SQR(x)      ((x)*(x))
@@ -1630,7 +1628,7 @@ extern int readrnxc(const char *file, nav_t *nav)
     
     for (i=0;i<MAXEXFILE;i++) {
         if (!(files[i]=(char *)malloc(1024))) {
-            for (i--;i>=0;i--) free(files[i]); return 0;
+            for (i--;i>=0;i--) { free(files[i]); } return 0;
         }
     }
     /* expand wild-card */
@@ -1867,7 +1865,12 @@ extern int outrnxobsh(FILE *fp, const rnxopt_t *opt, const nav_t *nav)
 {
     const char *glo_codes[]={"C1C","C1P","C2C","C2P"};
     double ep[6],pos[3]={0},del[3]={0};
-    int i,j,k,n,prn[MAXPRNGLO];
+    int i,j,k,n;
+#ifdef ENAGLO
+    int prn[MAXPRNGLO];
+#else
+    int prn[1];
+#endif
     char date[32],*sys,*tsys="GPS";
     
     trace(3,"outrnxobsh:\n");
@@ -2479,7 +2482,7 @@ extern int outrnxhnavh(FILE *fp, const rnxopt_t *opt, const nav_t *nav)
 extern int outrnxhnavb(FILE *fp, const rnxopt_t *opt, const seph_t *seph)
 {
     double ep[6];
-    int prn,sys;
+    int prn,sys=0;
     char code[32],*sep;
     
     trace(3,"outrnxhnavb: sat=%2d\n",seph->sat);

@@ -45,8 +45,7 @@ SRCS += grid.c cssr.c
 SRCS += ppprtk.c cssr2osr.c
 SRCS += rtkvrs.c
 
-RCV_SRCS = binex.c gw10.c novatel.c skytraq.c ublox.c crescent.c javad.c nvs.c \
-		   ss2.c rt17.c
+RCV_SRCS = binex.c novatel.c ublox.c
 
 OBJS = $(SRCS:.c=.o)
 RCV_OBJS = $(RCV_SRCS:.c=.o)

@@ -38,8 +38,6 @@
 #include <stdarg.h>
 #include "rtklib.h"
 
-static const char rcsid[]="$Id:$";
-
 /* constants/macros ----------------------------------------------------------*/
 
 #define SQR(x)      ((x)*(x))
@@ -455,7 +453,7 @@ static void udpos(rtk_t *rtk, double tt)
         return;
     }
     /* check variance of estimated postion */
-    for (i=0;i<3;i++) var+=rtk->P[i+i*rtk->nx]; var/=3.0;
+    for (i=0;i<3;i++) { var+=rtk->P[i+i*rtk->nx]; } var/=3.0;
     
     if (var>VAR_POS) {
         /* reset position with large variance */
@@ -1683,7 +1681,7 @@ void output_osr_txt( FILE *fp, const obsd_t *obs, const osrd_t *osr, const int n
 void output_osr_txt( FILE *fp, const obs_t *obs, const osrd_t *osr, const int n, double *pos)
 #endif
 {
-    int i,k,sys,sat,prn;
+    int i,k,sys,prn;
     double tow;
 
     for (i=0;i<n;i++){
@@ -1722,6 +1720,7 @@ void output_osr_txt( FILE *fp, const obs_t *obs, const osrd_t *osr, const int n,
     return;
 }
 
+#ifdef ENA_SSR2OSR
 static void write_osr(const obsd_t *obs, nav_t *nav, const osrd_t *osr, 
                           const double *x,  const int n, prcopt_t *opt)
 {
@@ -1741,6 +1740,7 @@ static void write_osr(const obsd_t *obs, nav_t *nav, const osrd_t *osr,
 
     return;
 }
+#endif
 
 /* initialize rtk control ------------------------------------------------------
 * initialize rtk control struct
@@ -1848,15 +1848,23 @@ extern void rtkfree(rtk_t *rtk)
 * notes  : before calling function, base station position rtk->sol.rb[] should
 *          be properly set for relative mode except for moving-baseline
 *-----------------------------------------------------------------------------*/
+#ifdef ENA_PPP_RTK
 extern int rtkpos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
+#else
+extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
+#endif
 {
     prcopt_t *opt=&rtk->opt;
     sol_t solb={{0}};
     gtime_t time;
     int i,nu,nr;
     char msg[128]="";
-    static int floatcnt = 0;
+#ifdef ENA_SSR2OSR
     osrd_t osr[MAXOBS]={{{0}}};
+#endif
+#ifdef ENA_PPP_RTK
+    static int floatcnt = 0;
+#endif
     
     trace(3,"rtkpos  : time=%s n=%d\n",time_str(obs[0].time,3),n);
     trace(4,"obs=\n"); traceobs(4,obs,n);
@@ -1894,7 +1902,7 @@ extern int rtkpos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
     if (opt->mode==PMODE_PPP_RTK) {
         ppp_rtk_pos(rtk,obs,nu,nav);
         if (opt->floatcnt > 0 && rtk->sol.stat == SOLQ_FLOAT) {
-            if (++floatcnt > opt->floatcnt) {
+            if (++floatcnt >= opt->floatcnt) {
                 trace(1, "float status continued than %d epoch: filter reset.\n", opt->floatcnt);
                 nav->filreset = TRUE;
                 floatcnt = 0;
