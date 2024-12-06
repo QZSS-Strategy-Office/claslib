@@ -1,0 +1,14 @@
+
+CLASLIB: ver.0.7.5 Release Notes
+                                                                       2024/12/06
+--------------------------------------------------------------------------------
+
+New Features in ver.0.7.5
+  noneiminor updatej
+
+
+Changes: ver.0.7.4 -> ver.0.7.5
+
+There are no changes to SSR2OSR and SSR2OBS.
+This revision is due to a change in the recommended value of the stats-stdbias parameter
+in the RNX2RTKP configuration file to optimize for ionospheric disturbances.

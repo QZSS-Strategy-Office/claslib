@@ -221,10 +221,13 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * 2022/08/25   0.7.3 - Improved parameters for PAR and ionospheric residual estimation to optimize for ionospheric disturbances.
  	   				 - Fixed some VRS processes to support PAR.
  	   				 - Added release notes "relnotes_0.7.3.txt"
-* 2024/03/11   0.7.3a - There are no changes to SSR2OSR, SSR2OBS and RNX2RTKP.  				 
+* 2024/03/11   0.7.3a - There are no changes to SSR2OSR, SSR2OBS and RNX2RTKP.
                         This revision is due to changes of LICENSE.
 * 2024/10/03   0.7.4 - Improved several processing.
  	   				 - Added release notes "relnotes_0.7.4.txt"
+* 2024/12/06   0.7.5 - There are no changes to SSR2OSR and SSR2OBS.
+ 	   				   This revision is due to changes in the recommended parameters of the RNX2RTKP configuration files.
+ 	   				 - Added release notes "relnotes_0.7.5.txt"
 
 # Notes
 * Note 1: CLAS message archives is avaiable at
