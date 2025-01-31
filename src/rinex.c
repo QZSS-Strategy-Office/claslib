@@ -672,11 +672,11 @@ static int readrnxh(FILE *fp, double *ver, char *type, int *sys, int *tsys,
 }
 /* decode obs epoch ----------------------------------------------------------*/
 static int decode_obsepoch(FILE *fp, char *buff, double ver, gtime_t *time,
-                           int *flag, int *sats)
+                           int *flag, int *sats, int *facility)
 {
     int i,j,n;
     char satid[8]="";
-    
+
     trace(4,"decode_obsepoch: ver=%.2f\n",ver);
     
     if (ver<=2.99) { /* ver.2 */
@@ -706,6 +706,8 @@ static int decode_obsepoch(FILE *fp, char *buff, double ver, gtime_t *time,
         if ((n=(int)str2num(buff,32,3))<=0) return 0;
         
         *flag=(int)str2num(buff,31,1);
+
+        *facility=(int)str2num(buff,35,2);
         
         if (3<=*flag&&*flag<=5) return n;
         
@@ -719,7 +721,7 @@ static int decode_obsepoch(FILE *fp, char *buff, double ver, gtime_t *time,
 }
 /* decode obs data -----------------------------------------------------------*/
 static int decode_obsdata(FILE *fp, char *buff, double ver, int mask,
-                          sigind_t *index, obsd_t *obs)
+                          sigind_t *index, obsd_t *obs,int facility)
 {
     sigind_t *ind;
     double val[MAXOBSTYPE]={0};
@@ -732,6 +734,7 @@ static int decode_obsdata(FILE *fp, char *buff, double ver, int mask,
     if (ver>2.99) { /* ver.3 */
         strncpy(satid,buff,3);
         obs->sat=(unsigned char)satid2no(satid);
+        obs->facility=facility;
     }
     if (!obs->sat) {
         trace(4,"decode_obsdata: unsupported sat sat=%s\n",satid);
@@ -963,7 +966,7 @@ static int readrnxobsb(FILE *fp, const char *opt, double ver,
     gtime_t time={0};
     sigind_t index[6]={{0}};
     char buff[MAXRNXLEN];
-    int i=0,n=0,nsat=0,sats[MAXOBS]={0},mask;
+    int i=0,n=0,nsat=0,sats[MAXOBS]={0},mask,facility=0;
     
     /* set system mask */
     mask=set_sysmask(opt);
@@ -981,7 +984,7 @@ static int readrnxobsb(FILE *fp, const char *opt, double ver,
         
         /* decode obs epoch */
         if (i==0) {
-            if ((nsat=decode_obsepoch(fp,buff,ver,&time,flag,sats))<=0) {
+            if ((nsat=decode_obsepoch(fp,buff,ver,&time,flag,sats,&facility))<=0) {
                 continue;
             }
         }
@@ -991,7 +994,7 @@ static int readrnxobsb(FILE *fp, const char *opt, double ver,
             data[n].sat=(unsigned char)sats[i-1];
             
             /* decode obs data */
-            if (decode_obsdata(fp,buff,ver,mask,index,data+n)&&n<MAXOBS) n++;
+            if (decode_obsdata(fp,buff,ver,mask,index,data+n,facility)&&n<MAXOBS) n++;
         }
         if (++i>nsat) return n;
     }
@@ -2044,7 +2047,7 @@ static int obsindex(double ver, int sys, const unsigned char *code,
 * return : status (1:ok, 0:output error)
 *-----------------------------------------------------------------------------*/
 extern int outrnxobsb(FILE *fp, const rnxopt_t *opt, const obsd_t *obs, int n,
-                      int flag)
+                      int flag, const int facility)
 {
     const char *mask;
     double ep[6];
@@ -2079,8 +2082,8 @@ extern int outrnxobsb(FILE *fp, const rnxopt_t *opt, const obsd_t *obs, int n,
         }
     }
     else { /* ver.3 */
-        fprintf(fp,"> %04.0f %2.0f %2.0f %2.0f %2.0f%11.7f  %d%3d%21s\n",
-                ep[0],ep[1],ep[2],ep[3],ep[4],ep[5],flag,ns,"");
+        fprintf(fp,"> %04.0f %2.0f %2.0f %2.0f %2.0f%11.7f  %d%3d %1d%19s\n",
+                ep[0],ep[1],ep[2],ep[3],ep[4],ep[5],flag,ns,facility,"");
     }
     for (i=0;i<ns;i++) {
         sys=satsys(obs[ind[i]].sat,NULL);

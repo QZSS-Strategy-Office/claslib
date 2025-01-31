@@ -60,7 +60,7 @@ typedef struct _grid_info {
 int gridsel = 2;
 
 
-static int pickup_candidates_of_grid(grid_info *gridinfo, const int network, const double *pos)
+static int pickup_candidates_of_grid(grid_info *gridinfo, const int network, const double *pos, int ch)
 {
     int start = (network > 0 ? network: 1), end = (network > 0 ? network + 1: CSSR_MAX_NETWORK);
     int inet, i, j, k, n = 0;
@@ -71,7 +71,7 @@ static int pickup_candidates_of_grid(grid_info *gridinfo, const int network, con
             if (fabs(-1.0 - clas_grid[inet][i][0]) < 0.0001 && fabs(-1.0 - clas_grid[inet][i][1]) < 0.0001 && fabs(-1.0 - clas_grid[inet][i][2]) < 0.0001) {
                 break;
             }
-            if (fabs(clas_grid[inet][i][2]) > 0.0001 || grid_stat[inet][i] == FALSE) {
+            if (fabs(clas_grid[inet][i][2]) > 0.0001 || grid_stat[ch][inet][i] == FALSE) {
                 continue;
             }
             
@@ -249,7 +249,7 @@ static void calc_grid_weight(double *weight, const double *pos, int n, grid_info
     }
 }
 
-static void output_selected_grid(const double *pos, int n, grid_info **gridindex, double *weight, const nav_t *nav)
+static void output_selected_grid(const double *pos, int n, grid_info **gridindex, double *weight)
 {
     static int savenetwork[4];
     static int saveindex[4];
@@ -299,28 +299,32 @@ static void output_selected_grid(const double *pos, int n, grid_info **gridindex
 *-----------------------------------------------------------------------------*/
 extern int get_grid_index(nav_t *nav, double *pos, grid_t *grid, prcopt_t *opt, gtime_t obstime)
 {
-    static grid_info gridinfo[MAX_GRID_CASHE];
+    static grid_info gridinfo[SSR_CH_NUM][MAX_GRID_CASHE];
     static grid_info *gridindex[4];
     double dlat, dlon;
-    int i, n = 0;
+    int i, n = 0, ch, nch[SSR_CH_NUM]={0,};
 
     trace(3, "get_grid: pos=%.3f %.3f n=%d\n", pos[0]*R2D, pos[1]*R2D, nav->nn);
 
     if (gridsel >= 2) {
         switch (nav->rtcmmode) {
         case RTCMMODE_CSSR:
-            n = pickup_candidates_of_grid(gridinfo, grid->network, pos);
+            for (ch=0;ch<(opt->l6mrg?SSR_CH_NUM:1);ch++) {
+                nch[ch] = pickup_candidates_of_grid(gridinfo[ch], grid->network, pos, ch);
+            }
+            ch=nch[0]>=nch[1]?0:1; 
+            n = nch[ch];
             break;
         default:
             break;
         }
     }
     
-    if (n >= 3 && gridinfo[0].network <= 12) {
-        if (opt->gridsel == 0 || gridinfo[0].weight > (double)opt->gridsel) {
-            n = find_grid_surround_pos(&gridindex[0], n, gridinfo);
+    if (n >= 3 && gridinfo[ch][0].network <= 12) {
+        if (opt->gridsel == 0 || gridinfo[ch][0].weight > (double)opt->gridsel) {
+            n = find_grid_surround_pos(&gridindex[0], n, gridinfo[ch]);
         } else {
-            gridindex[0] = &gridinfo[0];
+            gridindex[0] = &gridinfo[ch][0];
             n = 1;
         }
     } else if (n == 0) {
@@ -328,13 +332,13 @@ extern int get_grid_index(nav_t *nav, double *pos, grid_t *grid, prcopt_t *opt, 
             pos[0]*R2D, pos[1]*R2D);
         return 0;
     } else {
-        gridindex[0] = &gridinfo[0];
+        gridindex[0] = &gridinfo[ch][0];
         n = 1;
     }
 
-    n = is_exists_inside(pos, n, &gridindex[0], nav->rtcmmode, &gridinfo[0]);
+    n = is_exists_inside(pos, n, &gridindex[0], nav->rtcmmode, &gridinfo[ch][0]);
     calc_grid_weight(grid->weight, pos, n, &gridindex[0]);
-    output_selected_grid(pos, n, gridindex, grid->weight, nav);
+    output_selected_grid(pos, n, gridindex, grid->weight);
 
     if (n == 4) {
         double *U=mat(n,n);

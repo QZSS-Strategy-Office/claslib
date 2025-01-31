@@ -616,7 +616,7 @@ typedef struct _sat_corr {
     int sat;
 } sat_corr;
 
-static sat_corr satcorr[MAXSAT];
+static sat_corr satcorr[SSR_CH_NUM][MAXSAT];
 
 static double curr_rr[3];
 extern void saveposition(const double *pos)
@@ -639,99 +639,101 @@ static int getposition(double *pos)
 
 extern void clearsatcorr(void)
 {
-    int i;
+    int i,ch;
     
     memset(satcorr, 0x00, sizeof(satcorr));
-    for (i = 0; i < MAXSAT; ++i) {
-        satcorr[i].currtow = -1;
-        satcorr[i].prevtow = -1;
-        satcorr[i].previode = -1;
+    for (ch=0; ch<SSR_CH_NUM; ch++) {
+        for (i = 0; i < MAXSAT; ++i) {
+            satcorr[ch][i].currtow = -1;
+            satcorr[ch][i].prevtow = -1;
+            satcorr[ch][i].previode = -1;
+        }
     }
 }
 
-extern void getorbitclock(double tow, int sat, double *orbit, double *clock)
+extern void getorbitclock(double tow, int sat, double *orbit, double *clock, int ch)
 {
-    if (tow == satcorr[sat-1].tow) {
-        *orbit = satcorr[sat-1].orb;
-        *clock = satcorr[sat-1].clk;
+    if (tow == satcorr[ch][sat-1].tow) {
+        *orbit = satcorr[ch][sat-1].orb;
+        *clock = satcorr[ch][sat-1].clk;
     } else {
         *orbit = 0.0;
         *clock = 0.0;
     }
 }
 
-extern double adjust_cpc(gtime_t teph, int sat, const ssr_t *ssr, int sig, double cpc, double *sis, int *flag)
+extern double adjust_cpc(gtime_t teph, int sat, const ssr_t *ssr, int sig, double cpc, double *sis, int *flag, int ch)
 {
     double before = cpc;
     *flag = FALSE;
 
-    if (time2gpst(ssr->t0[5], NULL) != satcorr[sat-1].currtow) {
-        if (satcorr[sat-1].currtow < time2gpst(ssr->t0[5], NULL) && (satcorr[sat-1].currtow + 3600*24*7) - time2gpst(ssr->t0[5], NULL) != 30.0) {
+    if (time2gpst(ssr->t0[5], NULL) != satcorr[ch][sat-1].currtow) {
+        if (satcorr[ch][sat-1].currtow < time2gpst(ssr->t0[5], NULL) && (satcorr[ch][sat-1].currtow + 3600*24*7) - time2gpst(ssr->t0[5], NULL) != 30.0) {
             return cpc;
         }
-        if (satcorr[sat-1].currtow - time2gpst(ssr->t0[5], NULL) != 30.0) {
+        if (satcorr[ch][sat-1].currtow - time2gpst(ssr->t0[5], NULL) != 30.0) {
             return cpc;
         }
-        if (ssr->iode != satcorr[sat-1].previode) {
+        if (ssr->iode != satcorr[ch][sat-1].previode) {
             trace(4, "adjust_cpc: IODE diff, tow=%.1f, sat=%2d, orb_tow=%.1f %3d, sis_tow=%.1f %3d\n",
                     time2gpst(teph, NULL), sat, time2gpst(ssr->t0[0], NULL), ssr->iode,
-                    satcorr[sat-1].prevtow, satcorr[sat-1].previode);
+                    satcorr[ch][sat-1].prevtow, satcorr[ch][sat-1].previode);
             *flag = TRUE;
         }
-        *sis = satcorr[sat-1].currsis;
+        *sis = satcorr[ch][sat-1].currsis;
         cpc -= *sis;
         trace(4, "adjust_cpc: tow=%.1f, sat=%2d, clk_tow=%.1f, orb_tow=%.1f, pb_tow=%.1f, sis_tow=%.1f, sig=%d, sis=%f, cpc=%.6f --> %.6f\n",
                 time2gpst(teph, NULL), sat, time2gpst(ssr->t0[1], NULL), time2gpst(ssr->t0[0], NULL),
-                time2gpst(ssr->t0[5], NULL), satcorr[sat-1].currtow, sig, *sis, before, cpc);
+                time2gpst(ssr->t0[5], NULL), satcorr[ch][sat-1].currtow, sig, *sis, before, cpc);
     }
     return cpc;
 }
 
-extern double adjust_prc(gtime_t teph, int sat, const ssr_t *ssr, int sig, double prc, double *sis, int *flag)
+extern double adjust_prc(gtime_t teph, int sat, const ssr_t *ssr, int sig, double prc, double *sis, int *flag, int ch)
 {
     double before = prc;
     *flag = FALSE;
 
-    if (time2gpst(ssr->t0[5], NULL) != satcorr[sat-1].currtow) {
-        if (satcorr[sat-1].currtow < time2gpst(ssr->t0[5], NULL) && (satcorr[sat-1].currtow + 3600*24*7) - time2gpst(ssr->t0[5], NULL) != 30.0) {
+    if (time2gpst(ssr->t0[5], NULL) != satcorr[ch][sat-1].currtow) {
+        if (satcorr[ch][sat-1].currtow < time2gpst(ssr->t0[5], NULL) && (satcorr[ch][sat-1].currtow + 3600*24*7) - time2gpst(ssr->t0[5], NULL) != 30.0) {
             return prc;
         }
-        if (satcorr[sat-1].currtow - time2gpst(ssr->t0[5], NULL) != 30.0) {
+        if (satcorr[ch][sat-1].currtow - time2gpst(ssr->t0[5], NULL) != 30.0) {
             return prc;
         }
-        if (ssr->iode != satcorr[sat-1].previode) {
+        if (ssr->iode != satcorr[ch][sat-1].previode) {
             trace(4, "adjust_prc: IODE diff, tow=%.1f, sat=%2d, orb_tow=%.1f %3d, sis_tow=%.1f %3d\n",
                     time2gpst(teph, NULL), sat, time2gpst(ssr->t0[0], NULL), ssr->iode,
-                    satcorr[sat-1].prevtow, satcorr[sat-1].previode);
+                    satcorr[ch][sat-1].prevtow, satcorr[ch][sat-1].previode);
             *flag = TRUE;
         }
-        *sis = satcorr[sat-1].currsis;
+        *sis = satcorr[ch][sat-1].currsis;
         prc -= *sis;
         trace(4, "adjust_prc: tow=%.1f, sat=%2d, clk_tow=%.1f, orb_tow=%.1f, pb_tow=%.1f, sis_tow=%.1f, sig=%d, sis=%f, prc=%.6f --> %.6f\n",
                 time2gpst(teph, NULL), sat, time2gpst(ssr->t0[1], NULL), time2gpst(ssr->t0[0], NULL),
-                time2gpst(ssr->t0[5], NULL), satcorr[sat-1].currtow, sig, *sis, before, prc);
+                time2gpst(ssr->t0[5], NULL), satcorr[ch][sat-1].currtow, sig, *sis, before, prc);
     }
     return prc;
 }
 
-extern void adjust_r_dts(double *retr, double *retdts, gtime_t teph, int sat, nav_t *nav, double *rr, gtime_t dts_)
+extern void adjust_r_dts(double *retr, double *retdts, gtime_t teph, int sat, nav_t *nav, double *rr, gtime_t dts_, int ch)
 {
     double rs[6] = {0.0}, dts[2] = {0.0}, e[3], var;
     double er[3],ea[3],ec[3],rc[3],dt;
     int sys = satsys(sat, NULL), svh0;
-    const ssr_t *ssr = nav->ssr+sat-1;
+    const ssr_t *ssr = nav->ssr_ch[ch]+sat-1;
     eph_t *eph;
     int i;
     
     if (sys == SYS_GPS || sys == SYS_GAL || sys == SYS_QZS || sys == SYS_CMP) {
-        eph = seleph(dts_, sat, satcorr[sat-1].previode, nav);
+        eph = seleph(dts_, sat, satcorr[ch][sat-1].previode, nav);
         if (eph) {
             dt=eph2clk(dts_,eph);
             dts_=timeadd(dts_,-dt);
         }
     }
     
-    if (ephpos(dts_, teph, sat, nav, satcorr[sat-1].previode, rs, dts, &var, &svh0)) {
+    if (ephpos(dts_, teph, sat, nav, satcorr[ch][sat-1].previode, rs, dts, &var, &svh0)) {
         /* radial-along-cross directions in ecef */
         if (!normv3(rs+3,ea)) return;
         cross3(rs,rs+3,rc);
@@ -750,7 +752,7 @@ extern void adjust_r_dts(double *retr, double *retdts, gtime_t teph, int sat, na
     trace(2, "adjust_r_dts: tow=%.1f, sat=%d, r=%.8f, dts=%.8f\n", time2gpst(teph, NULL), sat, *retr, *retdts);
 }
 
-extern int satpos_ssr_sis(gtime_t time, gtime_t teph, int sat, rtk_t *rtk, nav_t *nav)
+extern int satpos_ssr_sis(gtime_t time, gtime_t teph, int sat, rtk_t *rtk, nav_t *nav, int ch)
 {
     ssr_t *ssr;
     double t1,t2,t3,dorb[3],sig[3],nsig[3],er[3],ea[3],ec[3],rc[3],deph[3],dclk,orbit;
@@ -761,7 +763,7 @@ extern int satpos_ssr_sis(gtime_t time, gtime_t teph, int sat, rtk_t *rtk, nav_t
 
     trace(4,"satpos_ssr_sis: time=%s sat=%2d\n",time_str(time,3),sat);
 
-    ssr=nav->ssr+sat-1;
+    ssr=nav->ssr_ch[ch]+sat-1;
 
     if (!ssr->t0[0].time) {
         trace(4,"no ssr orbit correction: %s sat=%2d\n",time_str(time,0),sat);
@@ -840,42 +842,36 @@ extern int satpos_ssr_sis(gtime_t time, gtime_t teph, int sat, rtk_t *rtk, nav_t
     orbit=dot(nsig,dorb,3);
 
     trace(4, "satpos_ssr_sis: tow=%.1f, sat=%2d, clk_tow=%.1f, clk=%6.6f, orb_tow=%.1f, orb=%6.6f,prev_tow=%.1f\n", tow,
-          sat, time2gpst(ssr->t0[1],NULL), dclk, time2gpst(ssr->t0[0],NULL), orbit,satcorr[sat-1].prevtow);
-    satcorr[sat-1].orb = orbit;
-    satcorr[sat-1].clk = dclk;
-    satcorr[sat-1].tow = tow;
+          sat, time2gpst(ssr->t0[1],NULL), dclk, time2gpst(ssr->t0[0],NULL), orbit,satcorr[ch][sat-1].prevtow);
+    satcorr[ch][sat-1].orb = orbit;
+    satcorr[ch][sat-1].clk = dclk;
+    satcorr[ch][sat-1].tow = tow;
 
-    if (rtk->opt.posopt[11] != 0) {
-        if (rtk->opt.posopt[9]) {
-            return 1;
-        }
-    } else {
-        if (!rtk->sisadjust) {
-            return 1;
-        }
+    if (rtk->opt.posopt[9]) {
+        return 1;
     }
-
-    if (satcorr[sat-1].prevtow != time2gpst(ssr->t0[1], NULL) && timediff(ssr->t0[0], ssr->t0[1]) < 0.0 && timediff(ssr->t0[1], ssr->t0[0]) == 25.0) {
-        satcorr[sat-1].prevtow = time2gpst(ssr->t0[1], NULL);
-        satcorr[sat-1].prevsis = (-dclk + orbit);
-        satcorr[sat-1].previode = ssr->iode;
-        satcorr[sat-1].sat = sat;
+    
+    if (satcorr[ch][sat-1].prevtow != time2gpst(ssr->t0[1], NULL) && timediff(ssr->t0[0], ssr->t0[1]) < 0.0 && timediff(ssr->t0[1], ssr->t0[0]) == 25.0) {
+        satcorr[ch][sat-1].prevtow = time2gpst(ssr->t0[1], NULL);
+        satcorr[ch][sat-1].prevsis = (-dclk + orbit);
+        satcorr[ch][sat-1].previode = ssr->iode;
+        satcorr[ch][sat-1].sat = sat;
         trace(4, "prevsis: tow=%.1f, clk_tow=%.1f, orb_tow=%.1f, sat=%2d, iode=%3d, prevsis=%f, clock=%f, orbit=%f\n",
-                time2gpst(teph, NULL), time2gpst(ssr->t0[1], NULL), time2gpst(ssr->t0[0], NULL), satcorr[sat-1].sat,
-                satcorr[sat-1].previode, satcorr[sat-1].prevsis, -dclk, orbit);
+                time2gpst(teph, NULL), time2gpst(ssr->t0[1], NULL), time2gpst(ssr->t0[0], NULL), satcorr[ch][sat-1].sat,
+                satcorr[ch][sat-1].previode, satcorr[ch][sat-1].prevsis, -dclk, orbit);
     }
-    if (satcorr[sat-1].prevtow != -1 && timediff(ssr->t0[0], ssr->t0[1]) == 0.0 && satcorr[sat-1].currtow != time2gpst(ssr->t0[1], NULL)) {
-        if (time2gpst(ssr->t0[1], NULL) < satcorr[sat-1].prevtow && (time2gpst(ssr->t0[1], NULL) + 3600*24*7) - satcorr[sat-1].prevtow != 5.0) {
+    if (satcorr[ch][sat-1].prevtow != -1 && timediff(ssr->t0[0], ssr->t0[1]) == 0.0 && satcorr[ch][sat-1].currtow != time2gpst(ssr->t0[1], NULL)) {
+        if (time2gpst(ssr->t0[1], NULL) < satcorr[ch][sat-1].prevtow && (time2gpst(ssr->t0[1], NULL) + 3600*24*7) - satcorr[ch][sat-1].prevtow != 5.0) {
             return 1;
         }
-        if (time2gpst(ssr->t0[1], NULL) - satcorr[sat-1].prevtow != 5.0) {
+        if (time2gpst(ssr->t0[1], NULL) - satcorr[ch][sat-1].prevtow != 5.0) {
             return 1;
         }
-        satcorr[sat-1].currsis = (-dclk + orbit) - satcorr[sat-1].prevsis;
-        satcorr[sat-1].currtow = time2gpst(ssr->t0[1], NULL);
+        satcorr[ch][sat-1].currsis = (-dclk + orbit) - satcorr[ch][sat-1].prevsis;
+        satcorr[ch][sat-1].currtow = time2gpst(ssr->t0[1], NULL);
         trace(4, "currsis: tow=%.1f, clk_tow=%.1f, orb_tow=%.1f, sat=%2d, currsis=%f, clock=%f, orbit=%f\n",
-                time2gpst(teph, NULL), satcorr[sat-1].currtow, time2gpst(ssr->t0[0], NULL), sat,
-                satcorr[sat-1].currsis, -dclk, orbit);
+                time2gpst(teph, NULL), satcorr[ch][sat-1].currtow, time2gpst(ssr->t0[0], NULL), sat,
+                satcorr[ch][sat-1].currsis, -dclk, orbit);
     }
     return 1;
 }
@@ -889,9 +885,9 @@ static int satpos_ssr(gtime_t time, gtime_t teph, int sat, const nav_t *nav,
     double sig[3],nsig[3],pos[3],tow = time2gpst(teph, NULL);
     int i;
     
-    trace(4,"satpos_ssr: time=%s sat=%2d\n",time_str(time,3),sat);
+    trace(4,"satpos_ssr: time=%s tow=%.1f sat=%2d\n",time_str(time,3),tow,sat);
     
-    ssr=nav->ssr+sat-1;
+    ssr=nav->ssr_ch[get_cssr_ch_idx()]+sat-1;
     
     if (!ssr->t0[0].time) {
         trace(2,"no ssr orbit correction: %s sat=%2d\n",time_str(time,0),sat);
@@ -966,11 +962,12 @@ static int satpos_ssr(gtime_t time, gtime_t teph, int sat, const nav_t *nav,
         return 0;
     }
     cross3(ea,ec,er);
-    
+#if 0
     /* satellite antenna offset correction */
     for (i=0;i<3;i++) {
         dorb[i]=-(er[i]*deph[0]+ea[i]*deph[1]+ec[i]*deph[2]);
     }
+#endif
     /* satellite antenna offset correction */
     if (opt) {
         satantoff(time,rs,sat,nav,dant);
@@ -988,10 +985,11 @@ static int satpos_ssr(gtime_t time, gtime_t teph, int sat, const nav_t *nav,
     if (!normv3(sig,nsig)) {
         return 0;
     }
+#if 0
     satcorr[sat-1].orb=dot(nsig,dorb,3);
     satcorr[sat-1].clk = dclk;
     satcorr[sat-1].tow = tow;
-    
+#endif
     /* variance by ssr ura */
     *var=var_urassr(ssr->ura);
     
@@ -1064,13 +1062,13 @@ extern int satpos(gtime_t time, gtime_t teph, int sat, int ephopt,
 extern void satposs(gtime_t teph, const obsd_t *obs, int n, const nav_t *nav,
                     int ephopt, double *rs, double *dts, double *var, int *svh)
 {
-    gtime_t time[MAXOBS]={{0}};
+    gtime_t time[MAXOBS*3]={{0}};
     double dt,pr;
     int i,j;
     
     trace(3,"satposs : teph=%s n=%d ephopt=%d\n",time_str(teph,3),n,ephopt);
     
-    for (i=0;i<n&&i<MAXOBS;i++) {
+    for (i=0;i<n;i++) {
         for (j=0;j<6;j++) rs [j+i*6]=0.0;
         for (j=0;j<2;j++) dts[j+i*2]=0.0;
         var[i]=0.0; svh[i]=0;

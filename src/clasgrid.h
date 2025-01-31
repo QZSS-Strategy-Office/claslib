@@ -9,12 +9,12 @@
 #ifndef CLASGRID_GLOBAL_DEFINE
 
 extern double clas_grid[CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP][3];
-extern int grid_stat[CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP];
+extern int grid_stat[SSR_CH_NUM][CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP];
 extern olod_t clas_oload[CSSR_MAX_NETWORK];
 
 #else
 
-int grid_stat[CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP];
+int grid_stat[SSR_CH_NUM][CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP];
 olod_t clas_oload[CSSR_MAX_NETWORK];
 double clas_grid[CSSR_MAX_NETWORK][RTCM_SSR_MAX_GP][3];
 

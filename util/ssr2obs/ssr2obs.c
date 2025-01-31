@@ -115,7 +115,6 @@ static FILE *open_osr(const char *file, rtcm_t *rtcm, int mode, char **infile, i
     }
     else if (mode == OSR_RTCM3) {
         init_rtcm(&rtcm_out);
-        rtcm_out.staid = OSR_STAID;
         matcpy(rtcm_out.sta.pos, prcopt->ru, 3, 1);
     }
     else if (mode == OSR_RINEX) {
@@ -140,7 +139,7 @@ static void close_osr(FILE *fp, rtcm_t *rtcm, int mode)
 }
 
 /* write OSR to output file --------------------------------------------------*/
-static void write_osr(FILE *fp, int mode, const obs_t *obs, const osrd_t *osr)
+static void write_osr(FILE *fp, int mode, const obs_t *obs, const osrd_t *osr, const nav_t *nav)
 {
     static const int syss[] = {SYS_GPS, SYS_GLO, SYS_GAL, SYS_QZS};
     static const int types[] = {1074, 1084, 1094, 1114}; /* RTCM 3 MSM4 */
@@ -157,6 +156,7 @@ static void write_osr(FILE *fp, int mode, const obs_t *obs, const osrd_t *osr)
         }
         rtcm_out.time = obs->data[0].time;
         rtcm_out.obs.n = obs->n;
+        rtcm_out.staid = nav->facility[0];
         
         for (i = sys = 0; i < obs->n; i++) {
             rtcm_out.obs.data[i] = obs->data[i];
@@ -178,7 +178,7 @@ static void write_osr(FILE *fp, int mode, const obs_t *obs, const osrd_t *osr)
     }
     else if (mode == OSR_RINEX) {
         if (obs->n > 0) {
-            outrnxobsb(fp, &rnx_opt, obs->data, obs->n, 0);
+            outrnxobsb(fp, &rnx_opt, obs->data, obs->n, 0, nav->facility[0]);
             
             if (!rnx_opt.tstart.time) {
                 rnx_opt.tstart = obs->data[0].time;
@@ -201,8 +201,8 @@ static int actualdist(gtime_t time, obs_t *obs, nav_t *nav, const double *x)
     for (i=0;i<MAXOBS;i++) obsd[i].time = time;
 
     for (i=n=0;i<MAXSAT;i++) {
-        if (!nav->ssr[i].t0[0].time||!nav->ssr[i].t0[1].time||
-                nav->ssr[i].nsig==0) continue;
+        if (!nav->ssr_ch[0][i].t0[0].time||!nav->ssr_ch[0][i].t0[1].time||
+                nav->ssr_ch[0][i].nsig==0) continue;
         lsat[n++]=i+1;
     }
 
@@ -217,7 +217,7 @@ static int actualdist(gtime_t time, obs_t *obs, nav_t *nav, const double *x)
         dt = 0.08; dt_p = 0.0;
         while (1) {
             tg = timeadd(time,-dt);
-            if(!ephpos(tg,time,sat,nav,nav->ssr[sat-1].iode,
+            if(!ephpos(tg,time,sat,nav,nav->ssr_ch[0][sat-1].iode,
                     rs+i*6,dts+2*i,var+i,svh)) {
                 obsd[i].sat = 0;
                 break;
@@ -330,6 +330,8 @@ static int gen_osr(gtime_t ts, gtime_t te, double ti, double latency, int mode,
     rtcm.mode=RTCMMODE_CSSR;
     
     init_fastfix_flag();
+    set_cssr_ch_idx(0);
+    init_cssr_object(0);
 
     for (i = 0; i < nt; i++) {
         time = timeadd(ts, ti * i); 
@@ -353,7 +355,7 @@ static int gen_osr(gtime_t ts, gtime_t te, double ti, double latency, int mode,
         
         if (obs.n>0) {                
             /* write OSR */
-            write_osr(fp_out, mode, &obs, osr);
+            write_osr(fp_out, mode, &obs, osr, &rtcm.nav);
         }
     }
     rtkfree(&rtk);

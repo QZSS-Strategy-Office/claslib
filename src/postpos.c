@@ -38,6 +38,7 @@
 
 #define MAXPRCDAYS  100          /* max days of continuous processing */
 #define MAXINFILE   1000         /* max number of input files */
+#define RTCM_FILENUM 2
 #define UPDATE_OPT_ORBIT  (1 << 0)
 #define UPDATE_OPT_CBIAS  (1 << 1)
 #define UPDATE_OPT_PBIAS  (1 << 2)
@@ -56,6 +57,7 @@ static sta_t stas[MAXRCV];      /* station infomation */
 static int nepoch=0;            /* number of observation epochs */
 static int iobsu =0;            /* current rover observation data index */
 static int iobsr =0;            /* current reference observation data index */
+static int iobsr2=0;            /* current reference observation data index(l6mrg VRS) */
 static int isbs  =0;            /* current sbas message index */
 static int ilex  =0;            /* current lex message index */
 static int revs  =0;            /* analysis direction (0:forward,1:backward) */
@@ -68,11 +70,11 @@ static int isolf=0;             /* current forward solutions index */
 static int isolb=0;             /* current backward solutions index */
 static char proc_rov [64]="";   /* rover for current processing */
 static char proc_base[64]="";   /* base station for current processing */
-static char rtcm_file[1024]=""; /* rtcm data file */
-static char rtcm_path[1024]=""; /* rtcm data path */
-static rtcm_t rtcm={0};         /* rtcm control struct */
-static rtcm_t rtcm_={0};        /* rtcm control struct */
-static FILE *fp_rtcm=NULL;      /* rtcm data file pointer */
+static char rtcm_file[RTCM_FILENUM][1024]={"", ""}; /* rtcm data file */
+static char rtcm_path[RTCM_FILENUM][1024]={"", ""}; /* rtcm data path */
+static rtcm_t rtcm={0};                             /* rtcm control struct */
+static rtcm_t rtcm_[RTCM_FILENUM] = {{0}};         /* rtcm control struct */
+static FILE* fp_rtcm[RTCM_FILENUM] = {NULL, NULL};  /* rtcm data file pointer */
 FILE *fp_osr=NULL;
 
 /* show message and check break ----------------------------------------------*/
@@ -197,14 +199,14 @@ static int nextobsb(const obs_t *obs, int *i, int rcv)
 static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
 {
     gtime_t time={0};
-    char path[1024],*ext=NULL;
-    int nu,nr,n=0,rtcm_mode=0;
+    char path[RTCM_FILENUM][1024],*ext=NULL;
+    int nu,nr,nr2,n=0,rtcm_mode=0;
     int i, j;
     int week_ref;
     int ret=0;
     FILE *dummy_fp[CSSR_TYPE_NUM];
     
-    trace(3,"infunc  : revs=%d iobsu=%d iobsr=%d isbs=%d\n",revs,iobsu,iobsr,isbs);
+    trace(3,"infunc  : revs=%d iobsu=%d iobsr=%d iobsr2=%d isbs=%d\n",revs,iobsu,iobsr,iobsr2,isbs);
     
     for (i=0;i<CSSR_TYPE_NUM;i++) dummy_fp[i] = NULL;
     
@@ -219,14 +221,26 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
         if (popt->intpref) {
             for (;(nr=nextobsf(&obss,&iobsr,2))>0;iobsr+=nr)
                 if (timediff(obss.data[iobsr].time,obss.data[iobsu].time)>-DTTOL) break;
+            if (popt->l6mrg) {
+                for (;(nr2=nextobsf(&obss,&iobsr2,3))>0;iobsr2+=nr2)
+                    if (timediff(obss.data[iobsr2].time,obss.data[iobsu].time)>-DTTOL) break;
+            }
         }
         else {
             for (i=iobsr;(nr=nextobsf(&obss,&i,2))>0;iobsr=i,i+=nr)
                 if (timediff(obss.data[i].time,obss.data[iobsu].time)>DTTOL) break;
+            if (popt->l6mrg) {
+                for (i=iobsr2;(nr2=nextobsf(&obss,&i,3))>0;iobsr2=i,i+=nr2)
+                    if (timediff(obss.data[i].time,obss.data[iobsu].time)>DTTOL) break;
+            }
         }
-        nr=nextobsf(&obss,&iobsr,2);
-        for (i=0;i<nu&&n<MAXOBS*2;i++) obs[n++]=obss.data[iobsu+i];
-        for (i=0;i<nr&&n<MAXOBS*2;i++) obs[n++]=obss.data[iobsr+i];
+        nr =nextobsf(&obss,&iobsr, 2);
+        for (i=0;i<nu&&n<MAXOBS*3;i++)  obs[n++]=obss.data[iobsu+i];
+        for (i=0;i<nr&&n<MAXOBS*3;i++)  obs[n++]=obss.data[iobsr+i];
+        if (popt->l6mrg) {
+            nr2=nextobsf(&obss,&iobsr2,3);
+            for (i=0;i<nr2&&n<MAXOBS*3;i++) obs[n++]=obss.data[iobsr2+i];
+        }
         iobsu+=nu;
         
         /* update sbas corrections */
@@ -247,54 +261,60 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
             ilex++;
         }
         /* update rtcm corrections */
-        if (*rtcm_file) {
+        for (i=0;i<RTCM_FILENUM;i++){
+            if (*rtcm_file[i]) {
             
-            /* open or swap rtcm file */
-            reppath(rtcm_file,path,obs[0].time,"","");
-            ext=strrchr(path,'.');
-            
-            if (ext) {
-                if (!strcmp(ext,".l6")||!strcmp(ext,".L6")) {
-                    rtcm_mode = RTCMMODE_CSSR;
-                }
-            }
-            if (strcmp(path,rtcm_path)) {
-                strcpy(rtcm_path,path);
+                /* open or swap rtcm file */
+                reppath(rtcm_file[i], path[i], obs[0].time, "", "");
+                ext=strrchr(path[i], '.');
                 
-                if (fp_rtcm) fclose(fp_rtcm);
+                if (ext) {
+                    if (!strcmp(ext,".l6")||!strcmp(ext,".L6")) {
+                            rtcm_mode = RTCMMODE_CSSR;
+                    }
+                }
+                if (strcmp(path[i],rtcm_path[i])) {
+                    strcpy(rtcm_path[i], path[i]);
+                    
+                    if (fp_rtcm[i]) fclose(fp_rtcm[i]);
+    
+                    if (rtcm_mode == RTCMMODE_CSSR) {
+                        fp_rtcm[i] = fopen(path[i], "rb");
+                        if (fp_rtcm[i]) {
+                            rtcm.nav.rtcmmode=rtcm_[i].nav.rtcmmode=RTCMMODE_CSSR;
+                            rtcm_[i].time=obs[0].time;
+                            init_cssr_object(i);
+                            if (popt->l6week != 0) {
+                                week_ref = popt->l6week;
+                            } else {
+                                time2gpst(obs[0].time,&week_ref);
+                            }
+                            for (j = 0; j < sizeof(rtcm_[i].week_ref) / sizeof(int); j++) {
+                                rtcm_[i].obs_ref[j] = obs[0].time;
+                                rtcm_[i].week_ref[j] = week_ref;
+                            }
+                                trace(2,"cssr file open: path=%s, week=%d\n",path[i],week_ref);
+    
+                            init_fastfix_flag();
+                        }
+                    }
+                    rtcm.mode=rtcm_mode;
+                }
+                if (fp_rtcm[i]) {
+                    set_cssr_ch_idx(i);
+                        for ( ; ; ) {
+                        if (rtcm_[i].subtype == 1 && timediff(rtcm_[i].time, obs[0].time) > 0.0) {
+                                break;
+                        }
+                        if ((ret = input_cssrf(&rtcm_[i], fp_rtcm[i], dummy_fp)) < -1) {
+                            break;
+                        }
+                        trace(4, "read cssr: obs=%.1f, rtcm=%.1f, type=%2d\n",
+                                    time2gpst(obs[0].time, NULL), time2gpst(rtcm_[i].time, NULL), rtcm_[i].subtype);
 
-                if (rtcm_mode == RTCMMODE_CSSR) {
-                    fp_rtcm=fopen(path,"rb");
-                    if (fp_rtcm) {
-                        rtcm.nav.rtcmmode=rtcm_.nav.rtcmmode=RTCMMODE_CSSR;
-                        rtcm_.time=obs[0].time;
-                        if (popt->l6week != 0) {
-                            week_ref = popt->l6week;
-                        } else {
-                            time2gpst(obs[0].time,&week_ref);
-                        }
-                        for (j = 0; j < sizeof(rtcm_.week_ref) / sizeof(int); j++) {
-                            rtcm_.week_ref[j] = week_ref;
-                            rtcm_.obs_ref[j] = obs[0].time;
-                        }
-                        trace(2,"cssr file open: path=%s, week=%d\n",path,week_ref);
-                        init_fastfix_flag();
                     }
+                    updateclas(&rtcm,popt,obs[0].time,rtcm_mode);
                 }
-                rtcm.mode=rtcm_mode;
-            }
-            if (fp_rtcm) {
-                for ( ; ; ) {
-                    if (rtcm_.subtype == 1 && timediff(rtcm_.time, obs[0].time) > 0.0) {
-                        break;
-                    }
-                    if ((ret = input_cssrf(&rtcm_, fp_rtcm, dummy_fp)) < -1) {
-                        break;
-                    }
-                    trace(4, "read cssr: obs=%.1f, rtcm=%.1f, type=%2d\n",
-                        time2gpst(obs[0].time, NULL), time2gpst(rtcm_.time, NULL), rtcm_.subtype);
-                }
-                updateclas(&rtcm,popt,obs[0].time,rtcm_mode);
             }
         }
     }
@@ -303,14 +323,26 @@ static int inputobs(obsd_t *obs, int solq, const prcopt_t *popt)
         if (popt->intpref) {
             for (;(nr=nextobsb(&obss,&iobsr,2))>0;iobsr-=nr)
                 if (timediff(obss.data[iobsr].time,obss.data[iobsu].time)<DTTOL) break;
+            if (popt->l6mrg) {
+                for (;(nr2=nextobsb(&obss,&iobsr2,3))>0;iobsr2-=nr2)
+                    if (timediff(obss.data[iobsr2].time,obss.data[iobsu].time)<DTTOL) break;
+            }
         }
         else {
             for (i=iobsr;(nr=nextobsb(&obss,&i,2))>0;iobsr=i,i-=nr)
                 if (timediff(obss.data[i].time,obss.data[iobsu].time)<-DTTOL) break;
+            if (popt->l6mrg) {
+                for (i=iobsr2;(nr2=nextobsb(&obss,&i,3))>0;iobsr2=i,i-=nr2)
+                    if (timediff(obss.data[i].time,obss.data[iobsu].time)<-DTTOL) break;
+            }
         }
-        nr=nextobsb(&obss,&iobsr,2);
-        for (i=0;i<nu&&n<MAXOBS*2;i++) obs[n++]=obss.data[iobsu-nu+1+i];
-        for (i=0;i<nr&&n<MAXOBS*2;i++) obs[n++]=obss.data[iobsr-nr+1+i];
+        nr= nextobsb(&obss,&iobsr ,2);
+        for (i=0;i<nu&&n<MAXOBS*3;i++)  obs[n++]=obss.data[iobsu-nu+1+i];
+        for (i=0;i<nr&&n<MAXOBS*3;i++)  obs[n++]=obss.data[iobsr-nr+1+i];
+        if (popt->l6mrg) {
+            nr2=nextobsb(&obss,&iobsr2,3);
+            for (i=0;i<nr2&&n<MAXOBS*3;i++) obs[n++]=obss.data[iobsr2-nr2+1+i];
+        }
         iobsu-=nu;
         
         /* update sbas corrections */
@@ -340,7 +372,7 @@ static void procpos(FILE *fp, prcopt_t *popt, const solopt_t *sopt,
     gtime_t time={0};
     sol_t sol={{0}};
     rtk_t rtk;
-    obsd_t obs[MAXOBS*2];
+    obsd_t obs[MAXOBS*3];
     double rb[3]={0};
     int i,nobs,n,solstatic,pri[]={0,1,2,3,4,5,1,6};
     
@@ -358,7 +390,10 @@ static void procpos(FILE *fp, prcopt_t *popt, const solopt_t *sopt,
     /* copy is correction */
     for (i=0;i<MAXRCV;i++) rtcm.nav.stas[i]=stas[i];
     
-    rtcm_path[0]='\0';
+    for (i = 0;i < RTCM_FILENUM;i++) {
+        rtcm_path[i][0] = '\0';
+    }
+
     
     while ((nobs=inputobs(obs,rtk.sol.stat,popt))>=0) {
         
@@ -370,9 +405,9 @@ static void procpos(FILE *fp, prcopt_t *popt, const solopt_t *sopt,
         if (n<=0) continue;
         
         if (rtcm.mode==RTCMMODE_CSSR) {
-            if (rtcm_.nav.filreset == TRUE) {
-                rtcm.nav.filreset = rtcm_.nav.filreset;
-                rtcm_.nav.filreset = FALSE;
+            if (rtcm_[0].nav.filreset == TRUE) {
+                rtcm.nav.filreset = rtcm_[0].nav.filreset;
+                rtcm_[0].nav.filreset = FALSE;
             }
             if (!rtkpos(&rtk,obs,n,&rtcm.nav)) continue;
         } else {
@@ -540,6 +575,7 @@ static void readpreceph(char **infile, int n, const prcopt_t *prcopt,
 {
     int i;
     char *ext;
+    int cssr_idx=0;
     
     trace(3,"readpreceph: n=%d\n",n);
     
@@ -570,16 +606,30 @@ static void readpreceph(char **infile, int n, const prcopt_t *prcopt,
     }
     
     /* set rtcm file and initialize rtcm struct */
-    rtcm_file[0]=rtcm_path[0]='\0'; fp_rtcm=NULL;
+    for (i=0;i<RTCM_FILENUM;i++) {
+        rtcm_file[i][0] = rtcm_path[i][0] = '\0';fp_rtcm[i] = NULL;
+    }
     
     for (i=0;i<n;i++) {
         if ((ext=strrchr(infile[i],'.'))&&
             (!strcmp(ext,".l6")||!strcmp(ext,".L6"))) {
-            strcpy(rtcm_file,infile[i]);
+            strcpy(rtcm_file[cssr_idx++], infile[i]);
             init_rtcm(&rtcm);
+            if (!prcopt->l6mrg) {
+                break;
+            }
+        }
+    }
+#if 0 
+    /* set fcb file */
+    fcb_file[0]=fcb_path[0]='\0'; fp_fcb=NULL;
+    for (i=0;i<n;i++) {
+        if ((ext=strrchr(infile[i],'.'))&&(!strcmp(ext,".fcb"))){
+            strcpy(fcb_file,infile[i]);
             break;
         }
     }
+#endif
 }
 /* free prec ephemeris and sbas data -----------------------------------------*/
 static void freepreceph(nav_t *nav, sbs_t *sbs, lex_t *lex)
@@ -603,7 +653,10 @@ static void freepreceph(nav_t *nav, sbs_t *sbs, lex_t *lex)
     stec_free(nav);
 #endif
     
-    if (fp_rtcm) fclose(fp_rtcm);
+    for (i=0;i<RTCM_FILENUM;i++){
+        if (fp_rtcm[i]) fclose(fp_rtcm[i]);
+    }
+
     free_rtcm(&rtcm);
 }
 /* read obs and nav data -----------------------------------------------------*/
@@ -653,6 +706,11 @@ static int readobsnav(gtime_t ts, gtime_t te, double ti, char **infile,
     if (nav->n<=0&&nav->ng<=0&&nav->ns<=0) {
         checkbrk("error : no nav data");
         trace(1,"no nav data\n");
+        return 0;
+    }
+    if (prcopt->l6mrg>0 && rcv<3 && prcopt->mode==PMODE_VRS_RTK) {
+        checkbrk("error : no vrs(obs) data");
+        trace(1,"no vrs(obs) data(l6mrg:%d)\n", prcopt->l6mrg);
         return 0;
     }
     /* sort observation data */
@@ -1040,7 +1098,7 @@ static int execses(gtime_t ts, gtime_t te, double ti, const prcopt_t *popt,
     }
     iobsu=iobsr=isbs=ilex=revs=aborts=0;
     
-    if (popt_.mode>=PMODE_PPP_RTK&&flag) {
+    if (popt_.mode>=PMODE_PPP_RTK&&sopt->osr) {
         strcpy(statfile,outfile);
         strcat(statfile,".osr");
         fp_osr = fopen(statfile, "w");
@@ -1155,6 +1213,10 @@ static int execses_b(gtime_t ts, gtime_t te, double ti, const prcopt_t *popt,
     
     /* read prec ephemeris and sbas data */
     readpreceph(infile,n,popt,&rtcm.nav,&sbss,&lexs);
+    if (popt->l6mrg && !*rtcm_file[1] && popt->mode!= PMODE_VRS_RTK) {
+        trace(1, "execses_b: popt->l6mrg=%d but not enough cssr files\n", popt->l6mrg);
+        return 1;
+    }
     
     for (i=0;i<n;i++) if (strstr(infile[i],"%b")) break;
     

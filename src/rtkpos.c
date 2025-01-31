@@ -1773,7 +1773,6 @@ extern void rtkinit(rtk_t *rtk, const prcopt_t *opt)
     }
     for (i=0;i<MAXERRMSG;i++) rtk->errbuf[i]=0;
     rtk->opt=*opt;
-    rtk->sisadjust = 1;
 }
 /* free rtk control ------------------------------------------------------------
 * free memory for rtk control struct
@@ -1857,7 +1856,7 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
     prcopt_t *opt=&rtk->opt;
     sol_t solb={{0}};
     gtime_t time;
-    int i,nu,nr;
+    int i,nu,nr[2]={0},age0=999,age1=999;
     char msg[128]="";
 #ifdef ENA_SSR2OSR
     osrd_t osr[MAXOBS]={{{0}}};
@@ -1865,8 +1864,9 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
 #ifdef ENA_PPP_RTK
     static int floatcnt = 0;
 #endif
+    double tow = time2gpst(obs[0].time, NULL);
     
-    trace(3,"rtkpos  : time=%s n=%d\n",time_str(obs[0].time,3),n);
+    trace(3,"rtkpos  : time=%s tow=%.1f n=%d\n",time_str(obs[0].time,3),tow,n);
     trace(4,"obs=\n"); traceobs(4,obs,n);
     /*trace(5,"nav=\n"); tracenav(5,nav);*/
     
@@ -1875,9 +1875,12 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
         for (i=0;i<6;i++) rtk->rb[i]=i<3?opt->rb[i]:0.0;
     }
     /* count rover/base station observations */
-    for (nu=0;nu   <n&&obs[nu   ].rcv==1;nu++) ;
-    for (nr=0;nu+nr<n&&obs[nu+nr].rcv==2;nr++) ;
-    
+    for (nu=0;   nu      <n&&obs[nu      ].rcv==1;nu++);
+    for (nr[0]=0;nu+nr[0]<n&&obs[nu+nr[0]].rcv==2;nr[0]++);
+    if (opt->l6mrg) {
+        for (nr[1]=0;nu+nr[0]+nr[1]<n&&obs[nu+nr[0]+nr[1]].rcv==3;nr[1]++);
+    }
+        
     time=rtk->sol.time; /* previous epoch */
     
     /* rover position by single point positioning */
@@ -1930,7 +1933,7 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
         return 1;
     }
     /* check number of data of base station and age of differential */
-    if (nr==0) {
+    if ((nr[0]==0 && opt->l6mrg==0) || (nr[0]+nr[1]==0 && opt->l6mrg==1)) {
         errmsg(rtk,"no base station observation data for rtk\n");
         outsolstat(rtk);
         return 1;
@@ -1938,7 +1941,7 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
     if (opt->mode==PMODE_MOVEB) { /*  moving baseline */
         
         /* estimate position/velocity of base station */
-        if (!pntpos(obs+nu,nr,nav,&rtk->opt,&solb,NULL,NULL,msg)) {
+        if (!pntpos(obs+nu,nr[0],nav,&rtk->opt,&solb,NULL,NULL,msg)) {
             errmsg(rtk,"base station position error (%s)\n",msg);
             return 0;
         }
@@ -1954,8 +1957,10 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
         for (i=0;i<3;i++) rtk->rb[i]+=rtk->rb[i+3]*rtk->sol.age;
     }
     else {
-        rtk->sol.age=(float)timediff(obs[0].time,obs[nu].time);
-        
+        age0=(float)timediff(obs[0].time,obs[nu].time);
+        if (opt->l6mrg) age1=(float)timediff(obs[0].time,obs[nu+nr[0]].time);
+        rtk->sol.age=fabs(age0)<fabs(age1)?age0:age1;
+
         if (fabs(rtk->sol.age)>opt->maxtdiff) {
             errmsg(rtk,"age of differential error (age=%.1f)\n",rtk->sol.age);
             outsolstat(rtk);
@@ -1976,10 +1981,10 @@ extern int rtkpos(rtk_t *rtk, obsd_t *obs, int n, nav_t *nav)
             floatcnt = 0;
         }
      }else{
-         relpos(rtk,obs,nu,nr,nav);
+         relpos(rtk,obs,nu,nr[0],nav);
      }
 #else
-    relpos(rtk,obs,nu,nr,nav);
+    relpos(rtk,obs,nu,nr[0],nav);
 #endif
     outsolstat(rtk);
     

@@ -201,12 +201,17 @@ const prcopt_t prcopt_default={ /* defaults processing options */
     {{0.0}},{{0}},{""},         /* odisp,exterr,rectype */
     0,0,                        /* isb,phasshft */
     0.0,                        /* beta */
-    0,0                       /* L6 week, L6 dump */
+    0,0,                        /* L6 week, L6 dump */
+    0                           /* L6 2ch mode */
 };
 const solopt_t solopt_default={ /* defaults solution output options */
     SOLF_LLH,TIMES_GPST,1,3,    /* posf,times,timef,timeu */
     0,1,0,0,0,0,                /* degf,outhead,outopt,datum,height,geoid */
-    0,0,0,                      /* solstatic,sstat,trace */
+#ifdef ENA_SSR2OSR
+    0,0,0,1,                    /* solstatic,sstat,trace,osr */
+#else
+    0,0,0,0,                    /* solstatic,sstat,trace,osr */
+#endif
     {0.0,0.0},                  /* nmeaintv */
     " ",""                      /* separator/program name */
 };
@@ -1086,7 +1091,7 @@ extern int matinv(double *A, int n)
     indx=imat(n,1); B=mat(n,n); matcpy(B,A,n,n);
     if (ludcmp(B,n,indx,&d)) {free(indx); free(B); return -1;}
     for (j=0;j<n;j++) {
-        for (i=0;i<n;i++) A[i+j*n]=0.0; A[j+j*n]=1.0;
+        for (i=0;i<n;i++) { A[i+j*n]=0.0; } A[j+j*n]=1.0;
         lubksb(B,n,indx,A+j*n);
     }
     free(indx); free(B);
@@ -1525,6 +1530,22 @@ static int filter2_(rtk_t *rtk, const double *x, const double *P,
     
     return info;
 }
+
+/* Kalman filter measurement update  ----------------------------------
+* args   : rtk_t   *rtk      I   rtk control/result struct
+*          double  *x        I/O float states
+*          double  *P        I/O error covariance matrix
+*          double  *Q        I/O process noise matrix[nx*nx]
+*          double  *H        I   measurement matrix
+*          double  *v        I   single differenced residual
+*          double  *R        I   measurement error matrix
+*          int     n         I   number of residual
+*          int     m         I   number of single differenced residual output
+*          int     *vflg     I   residuals infomation
+*          int     flg       I   (prefix:0 or postfix:1)
+* return : status of matinv function(inverse of matrix )
+* notes  : 
+*-----------------------------------------------------------------------------*/
 extern int filter2(rtk_t *rtk, double *x, double *P, double *Q, const double *H,
                    const double *v, const double *R, const int n,
                    const int m, const int *vflg, const int flg)

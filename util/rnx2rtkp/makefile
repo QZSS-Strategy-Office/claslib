@@ -95,9 +95,14 @@ OBS_ST12_B= $(DATADIR)0627349AB.bnx
 NAV_ST12  = $(DATADIR)sept_2019349.nav
 L6_ST12   = $(DATADIR)2019349B.l6
 VRS_ST12= $(DATADIR)vrs2019349B.obs
+OPTT_2CH = -ts 2024/11/16 17:00:00 -te 2024/11/16 17:59:59
+L6_1CH  = $(DATADIR)2024321RR.l6
+L6_2CH  = $(DATADIR)2024321RR_2.l6
+OBS_2CH = $(DATADIR)0627321RR.bnx
 
 INPUT_L6   = $(OBS) $(NAV) $(L6)
 INPUT_VRS  = $(OBS) $(NAV) $(VRS)
+INPUT_2CH_L6 = $(OBS_2CH) $(L6_1CH) $(L6_2CH)
 OUTPUT_L6  = $(basename $(notdir $(OBS)))_L6.nmea
 OUTPUT_VRS = $(basename $(notdir $(OBS)))_VRS.nmea
 INPUT_L6W  = $(OBS_W) $(NAV_W) $(L6_W)
@@ -112,6 +117,7 @@ OUTPUT_L6B = $(basename $(notdir $(OBS_B)))_claslib_L6B.nmea
 OUTPUT_ST12= $(basename $(notdir $(OBS_ST12_B)))_claslib_ST12.nmea
 OUTPUT_NONAV= $(basename $(notdir $(OBS_ST12_B)))_claslib_NONAV.nmea
 OUTPUT_VRS_ST12 = $(basename $(notdir $(OBS_ST12_B)))_claslib_VRS_ST12.nmea
+OUTPUT_L6_2CH = $(basename $(notdir $(OBS_2CH)))_claslib_L6_2ch.nmea
 
 test_L6 :
 	$(CMD) -ti 1 $(OPTT) -x 2 -k $(CONF_L6) $(INPUT_L6) -o $(OUTPUT_L6)
@@ -133,6 +139,9 @@ test_NONAV:
 
 test_ST12_VRS:
 	$(CMD) -ti 1 $(OPTT_ST12) -x 3 -k $(CONF_VRS) $(INPUT_VRS_ST12) -o $(OUTPUT_VRS_ST12)
+	
+test_L6_2CH:
+	$(CMD) -ti 1 $(OPTT_2CH) -x 1 -k $(CONF_L6) $(INPUT_2CH_L6) -o $(OUTPUT_L6_2CH) -l6msg 1
 
 clean :
 	rm -f rnx2rtkp$(EXT) *.o

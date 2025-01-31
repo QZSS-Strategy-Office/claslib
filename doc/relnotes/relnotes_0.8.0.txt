@@ -1,0 +1,33 @@
+
+CLASLIB: ver.0.8.0 Release Notes
+                                                                       2025/01/31
+--------------------------------------------------------------------------------
+New Features in ver.0.8.0
+(1) Supported two channels of L6 message input defined in IS-QZSS-L6-006 in ppp-rtk mode
+
+Changes: ver.0.7.5 -> ver.0.8.0
+(1) The following issue is fixed.
+  (a) Fixed a missing reset process for state quantities that should have been performed before the prior residuals test.
+
+(2) The following source codes are added, deleted or changed.
+  (a) added
+   none
+
+  (b) deleted
+    none
+
+  (c) changed
+    clasgrid.h, cssr.c, cssr2osr.c, cssr2osr.h, ephemeris.c, grid.c, postpos.c, ppprtk.c, 
+    rcvraw.c, rinex.c, rtkcmn.c, rtklib.h, rtkpos.c, rtkvrs.c
+
+(3) SSR2OSR
+  (a) Supported two channels of L6 message input as defined in IS-QZSS-L6-006
+
+(4) RNX2RTKP
+  (a) Supported two channels of L6 message input defined in IS-QZSS-L6-006 in ppp-rtk mode
+  (b) Added an option whether to use 2 channels L6 messages (-l6msg)
+  (c) Added an option whether to output osrfile (-s)
+  (d) Fixed a missing reset process for state quantities which was supposed to be performed before the prior residuals test.
+
+(5) SSR2OBS
+  (a) Supported two channels of L6 message input as defined in IS-QZSS-L6-006

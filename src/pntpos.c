@@ -215,8 +215,8 @@ static int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     for (i=*ns=0;i<n&&i<MAXOBS;i++) {
         vsat[i]=0; azel[i*2]=azel[1+i*2]=resp[i]=0.0;
         
-		if (outp[obs[i].sat-1]==1) continue;
-		
+        if (outp[obs[i].sat-1]==1) continue;
+        
         if (!(sys=satsys(obs[i].sat,NULL))) continue;
         
         /* reject duplicated observation data */
@@ -312,25 +312,25 @@ static int valsol(const double *azel, const int *vsat, int n,
 }
 /* exclude large res satelite */
 static void exclsat(const obsd_t *obs, const double *resp, const prcopt_t *opt,
-					const int n, const int *vsat, int *outp)
+                    const int n, const int *vsat, int *outp)
 {
-	int i,j;
-	double v2=0.0;
-	double thre=(opt->rejethres*opt->rejethres);
-	
-	for (i=j=0;i<n;i++) {
-		if (vsat[i]==0) continue;
-		v2+=(resp[i]*resp[i]);
-		j++;
-	}
-	if (j==0||(v2/j)>thre) return;
-	for (i=0;i<n;i++){
-		if ((resp[i]*resp[i])>thre) {
-			outp[obs[i].sat-1]=1;	
-			trace(2,"pntpos : excluded obs due to large residuals :sat=%2d res=%.2f avg=%f\n",
-			obs[i].sat,resp[i],sqrt(v2/j));
-		}	
-	}
+    int i,j;
+    double v2=0.0;
+    double thre=(opt->rejethres*opt->rejethres);
+    
+    for (i=j=0;i<n;i++) {
+        if (vsat[i]==0) continue;
+        v2+=(resp[i]*resp[i]);
+        j++;
+    }
+    if (j==0||(v2/j)>thre) return;
+    for (i=0;i<n;i++){
+        if ((resp[i]*resp[i])>thre) {
+            outp[obs[i].sat-1]=1;
+            trace(2,"pntpos : excluded obs due to large residuals :sat=%2d res=%.2f avg=%f\n",
+            obs[i].sat,resp[i],sqrt(v2/j));
+        }    
+    }
 
 }
 /* estimate receiver position ------------------------------------------------*/
@@ -341,7 +341,7 @@ static int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
 {
     double x[NX]={0},dx[NX],Q[NX*NX],*v,*H,*var,sig;
     int i,j,k,info,stat,nv,ns;
-	int outp[MAXSAT]={0};
+    int outp[MAXSAT]={0};
     
     trace(3,"estpos  : n=%d\n",n);
     
@@ -586,11 +586,11 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
     rs=mat(6,n); dts=mat(2,n); var=mat(1,n); azel_=zeros(2,n); resp=mat(1,n);
     
     if (opt_.mode!=PMODE_SINGLE) { /* for precise positioning */
-		if (opt_.mode>=PMODE_PPP_RTK) {
-			opt_.sateph =EPHOPT_BRDC;
-			opt_.ionoopt=IONOOPT_IFLC;
-			opt_.tropopt=TROPOPT_SAAS;			 
-		} else {
+        if (opt_.mode>=PMODE_PPP_RTK) {
+            opt_.sateph =EPHOPT_BRDC;
+            opt_.ionoopt=IONOOPT_IFLC;
+            opt_.tropopt=TROPOPT_SAAS;
+        } else {
 #if 0
             opt_.sateph =EPHOPT_BRDC;
 #endif
