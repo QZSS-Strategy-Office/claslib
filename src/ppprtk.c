@@ -709,18 +709,19 @@ void set_init_pb(rtk_t *rtk, const nav_t *nav, const obsd_t *obs, int n, int f, 
 extern void getsysprnstr(char *exsatstr, int exsat, char *comma_str)
 {
     int prn;
-    char tmpstr[10];
+    char tmpstr[10]="";
     switch (satsys(exsat, &prn)) {
         case SYS_GPS: sprintf(tmpstr, "G%02d%s", prn, comma_str); break;
         case SYS_GAL: sprintf(tmpstr, "E%02d%s", prn, comma_str); break;
         case SYS_QZS: sprintf(tmpstr, "J%02d%s", prn, comma_str); break;
+        default: return;
     }
     strcat(exsatstr, tmpstr);
 }
 void trace_slct_ch( rtk_t *rtk, const obsd_t *obs, int n, int order, int pch, int trace_level)
 {
     prcopt_t *opt=&rtk->opt;
-    char ch0[1024], ch1[1024], temp[64];
+    char ch0[1024], ch1[1024], temp[1024];
     int num0, num1, nf=NF(opt), f, j, satj;
 
     for (f=opt->mode>PMODE_DGPS?0:nf;f<nf;f++) { /* freq*(phase+code) */
@@ -745,8 +746,8 @@ void trace_slct_ch( rtk_t *rtk, const obsd_t *obs, int n, int order, int pch, in
                 }
             }    
         }
-        sprintf(ch0, "%s satnum=%d\n", ch0, num0); trace(trace_level, ch0);
-        sprintf(ch1, "%s satnum=%d\n", ch1, num1); trace(trace_level, ch1);
+        sprintf(temp, "%s satnum=%d\n", ch0, num0); trace(trace_level, temp);
+        sprintf(temp, "%s satnum=%d\n", ch1, num1); trace(trace_level, temp);
         trace(trace_level, "----------------------\n");
     }
 }
@@ -927,8 +928,9 @@ extern int ddres(rtk_t *rtk, const nav_t *nav, double *x, double *pbslip[SSR_CH_
 
                 if (order==FST && f<nf && opt->l6mrg && !samefac) {
                     /* two case for reset the phase bias */                    
-                    /* (1) 今回変更になった基準衛星の前回選択chと異なるchを選択した従属衛星はリセット */
-                    /* (2) 基準衛星に関わらず、前回と異なるchが選択された衛星はリセット */
+                    /* (1) if the reference satellite is changed and the dependent satellite that 
+                    /*     has selected a different ch from the previous ch of the changed reference satellite is reset */
+                    /* (2) reset the satellite that selected a different channel from the previous one */
                     if ((pre_use_ch[f][sati]!=ch && refchgflg) || (pre_use_ch[f][satj]!=ch)) {
                         set_init_pb(rtk, nav, obs, n, f, satj);
                     }

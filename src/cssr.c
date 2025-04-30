@@ -1944,7 +1944,7 @@ static int sigmask2sig_p(int nsat, int *sat, uint16_t *sigmask, uint16_t *cellma
 static int sigmask2sig(int nsat, int *sat, uint16_t *sigmask, uint16_t *cellmask,
         int *nsig, int *sig)
 {
-    int j,k,id,*codes=NULL,sys,sys_p=-1,ofst=0,nsig_s=0,code[CSSR_MAX_SIG];
+    int j,k,id,*codes=NULL,sys,sys_p=-1,ofst=0,nsig_s=0,code[CSSR_MAX_SIG],csize=0;
     const int codes_gps[]={
         CODE_L1C,CODE_L1P,CODE_L1W,CODE_L1S,CODE_L1L,CODE_L1X,
         CODE_L2S,CODE_L2L,CODE_L2X,CODE_L2P,CODE_L2W,
@@ -1977,14 +1977,14 @@ static int sigmask2sig(int nsat, int *sat, uint16_t *sigmask, uint16_t *cellmask
             id = sys2gnss(sys, NULL);
             ofst = 0;
             switch (sys) {
-                case SYS_GPS: codes = (int *)codes_gps; break;
-                case SYS_GLO: codes = (int *)codes_glo; break;
-                case SYS_GAL: codes = (int *)codes_gal; break;
-                case SYS_CMP: codes = (int *)codes_bds; break;
-                case SYS_QZS: codes = (int *)codes_qzs; break;
-                case SYS_SBS: codes = (int *)codes_sbs; break;
+                case SYS_GPS: codes = (int *)codes_gps; csize=sizeof(codes_gps)/sizeof(int); break;
+                case SYS_GLO: codes = (int *)codes_glo; csize=sizeof(codes_glo)/sizeof(int); break;
+                case SYS_GAL: codes = (int *)codes_gal; csize=sizeof(codes_gal)/sizeof(int); break;
+                case SYS_CMP: codes = (int *)codes_bds; csize=sizeof(codes_bds)/sizeof(int); break;
+                case SYS_QZS: codes = (int *)codes_qzs; csize=sizeof(codes_qzs)/sizeof(int); break;
+                case SYS_SBS: codes = (int *)codes_sbs; csize=sizeof(codes_sbs)/sizeof(int); break;
             }
-            for (k=0,nsig_s=0;k<CSSR_MAX_SIG;k++) {
+            for (k=0,nsig_s=0;k<csize&&k<CSSR_MAX_SIG;k++) {
                 if ((sigmask[id]>>(CSSR_MAX_SIG-1-k))&1) {
                     code[nsig_s] = codes[k];
                     nsig_s++;
@@ -3750,6 +3750,7 @@ extern int read_grid_def(const char *gridfile)
             break;
         } else {
             trace(1, "grid definition: invalid format%d\n", gridsel);
+            fclose(fp);
             return -1;
         }
     }
@@ -4196,6 +4197,7 @@ extern int dumpcssr(char **infile, int n, FILE **ofp, filopt_t *fopt){
     if (read_grid_def(fopt->grid)) {
         fprintf(stderr, "Grid file read error. %s\n", fopt->grid);
         showmsg("Grid file read error. %s\n", fopt->grid);
+	    fclose(fp);
         return -1;
     }
 
@@ -4204,6 +4206,7 @@ extern int dumpcssr(char **infile, int n, FILE **ofp, filopt_t *fopt){
             break;
         }
     }
+	fclose(fp);
     return 0;
 }
 

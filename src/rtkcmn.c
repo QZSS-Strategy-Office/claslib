@@ -197,7 +197,7 @@ const prcopt_t prcopt_default={ /* defaults processing options */
     {0},{0},{0},                /* baseline,ru,rb */
     {"",""},                    /* anttype */
     {{0}},{{0}},{0},            /* antdel,pcvr,exsats */
-    {{0}},{0},0,                /* rnxopt,posopt,syncsol */
+    {{0}},{0,0,0,0,0,0,0,0,0,0,0,0,2},0, /* rnxopt,posopt,syncsol */
     {{0.0}},{{0}},{""},         /* odisp,exterr,rectype */
     0,0,                        /* isb,phasshft */
     0.0,                        /* beta */
@@ -2520,7 +2520,7 @@ static int readantex(const char *file, pcvs_t *pcvs)
 {
     FILE *fp;
     static const pcv_t pcv0={0};
-    pcv_t pcv;
+    pcv_t pcv={0};
     double neu[3];
     int i,f,freq=0,state=0,freqs[]={1,2,5,6,7,8,0};
     char buff[256];

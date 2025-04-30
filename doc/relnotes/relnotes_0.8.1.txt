@@ -1,0 +1,30 @@
+
+CLASLIB: ver.0.8.1 Release Notes
+                                                                       2025/04/30
+--------------------------------------------------------------------------------
+New Features in ver.0.8.1
+(1) vrs-rtk mode supports two channels of L6 message input defined in IS-QZSS-L6-006.
+(2) ppp-rkt mode supports settings to prioritize the L1C signal over the L1C/A signal for QZS.
+
+Changes: ver.0.8.0 -> ver.0.8.1
+(1) The following source codes are added, deleted or changed.
+  (a) added
+   none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.c, cssr2osr.c, geoid.c, ionex.c, options.c, postpos.c, ppprtk.c, rinex.c, rtkcmn.c, rtklib.h, rnx2rtkp.c
+
+(2) SSR2OSR
+  (a) SSR2OSR supports settings to prioritize the L1C signal over the L1C/A signal for QZS.
+
+(3) RNX2RTKP
+  (a) vrs-rtk mode supports two channels of L6 message input defined in IS-QZSS-L6-006.
+  (b) ppp-rkt mode supports prioritize the L1C signal over the L1C/A signal for QZS.
+  (c) -JL1C in misc-rnxopt1 option prioritizes the L1C signal over the L1C/A signal for QZS
+
+(4) SSR2OBS
+  (a) vrs-rtk mode supports two channels of L6 message input defined in IS-QZSS-L6-006.
+

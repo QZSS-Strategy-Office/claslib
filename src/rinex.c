@@ -1470,7 +1470,7 @@ static int readrnxfile(const char *file, gtime_t ts, gtime_t te, double tint,
 {
     FILE *fp;
     int cstat,stat;
-    char tmpfile[1024];
+    char tmpfile[1024]="";
     
     trace(3,"readrnxfile: file=%s flag=%d index=%d\n",file,flag,index);
     

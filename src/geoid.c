@@ -49,7 +49,7 @@ static double geoidh_emb(const double *pos)
 /* get 2 byte signed integer from file ---------------------------------------*/
 static short fget2b(FILE *fp, long off)
 {
-    unsigned char v[2];
+    unsigned char v[2]="";
     if (fseek(fp,off,SEEK_SET)==EOF||fread(v,2,1,fp)<1) {
         trace(2,"geoid data file range error: off=%ld\n",off);
     }

@@ -70,6 +70,7 @@ CMD = ./rnx2rtkp$(EXT)
 # for kinematic
 CONF_L6   = kinematic.conf
 CONF_VRS  = kinematic_vrs.conf
+CONF_L1CL5  = kinematic_L1CL5.conf
 
 
 # for static
@@ -96,13 +97,19 @@ NAV_ST12  = $(DATADIR)sept_2019349.nav
 L6_ST12   = $(DATADIR)2019349B.l6
 VRS_ST12= $(DATADIR)vrs2019349B.obs
 OPTT_2CH = -ts 2024/11/16 17:00:00 -te 2024/11/16 17:59:59
-L6_1CH  = $(DATADIR)2024321RR.l6
-L6_2CH  = $(DATADIR)2024321RR_2.l6
+L6_CH1  = $(DATADIR)2024321RR.l6
+L6_CH2  = $(DATADIR)2024321RR_2.l6
 OBS_2CH = $(DATADIR)0627321RR.bnx
+L6_VRS_CH1 = $(DATADIR)2024321RR_CH1.obs
+L6_VRS_CH2 = $(DATADIR)2024321RR_CH2.obs
+OPTT_L1CL5 = -ts 2025/1/22 16:00:00 -te 2025/1/22 16:59:59
+L6_L1CL5  = $(DATADIR)2025022Q.l6
+OBS_L1CL5 = $(DATADIR)0627022Q.bnx
+
 
 INPUT_L6   = $(OBS) $(NAV) $(L6)
 INPUT_VRS  = $(OBS) $(NAV) $(VRS)
-INPUT_2CH_L6 = $(OBS_2CH) $(L6_1CH) $(L6_2CH)
+INPUT_2CH_L6 = $(OBS_2CH) $(L6_CH1) $(L6_CH2)
 OUTPUT_L6  = $(basename $(notdir $(OBS)))_L6.nmea
 OUTPUT_VRS = $(basename $(notdir $(OBS)))_VRS.nmea
 INPUT_L6W  = $(OBS_W) $(NAV_W) $(L6_W)
@@ -118,6 +125,10 @@ OUTPUT_ST12= $(basename $(notdir $(OBS_ST12_B)))_claslib_ST12.nmea
 OUTPUT_NONAV= $(basename $(notdir $(OBS_ST12_B)))_claslib_NONAV.nmea
 OUTPUT_VRS_ST12 = $(basename $(notdir $(OBS_ST12_B)))_claslib_VRS_ST12.nmea
 OUTPUT_L6_2CH = $(basename $(notdir $(OBS_2CH)))_claslib_L6_2ch.nmea
+INPUT_2CH_L6_VRS = $(OBS_2CH) $(L6_VRS_CH1) $(L6_VRS_CH2)
+OUTPUT_L6_2CH_VRS = $(basename $(notdir $(OBS_2CH)))_claslib_L6_2ch_vrs.nmea
+INPUT_2CH_L6_L1CL5 = $(OBS_L1CL5) $(L6_L1CL5)
+OUTPUT_L6_L1CL5 = $(basename $(notdir $(OBS_L1CL5)))_claslib_L6_L1CL5.nmea
 
 test_L6 :
 	$(CMD) -ti 1 $(OPTT) -x 2 -k $(CONF_L6) $(INPUT_L6) -o $(OUTPUT_L6)
@@ -142,6 +153,12 @@ test_ST12_VRS:
 	
 test_L6_2CH:
 	$(CMD) -ti 1 $(OPTT_2CH) -x 1 -k $(CONF_L6) $(INPUT_2CH_L6) -o $(OUTPUT_L6_2CH) -l6msg 1
+	
+test_L6_2CH_VRS:
+	$(CMD) -ti 1 $(OPTT_2CH) -x 1 -k $(CONF_VRS) $(INPUT_2CH_L6_VRS) -o $(OUTPUT_L6_2CH_VRS) -l6msg 1
+
+test_L6_L1CL5:
+	$(CMD) -ti 1 $(OPTT_L1CL5) -x 1 -k $(CONF_L1CL5) $(INPUT_2CH_L6_L1CL5) -o $(OUTPUT_L6_L1CL5)
 
 clean :
 	rm -f rnx2rtkp$(EXT) *.o

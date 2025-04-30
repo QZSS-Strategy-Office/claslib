@@ -306,6 +306,7 @@ extern void readtec(const char *file, nav_t *nav, int opt)
         /* read ionex header */
         if (readionexh(fp,lats,lons,hgts,&rb,&nexp,dcb,rms)<=0.0) {
             trace(2,"ionex file format error %s\n",efiles[i]);
+            fclose(fp);
             continue;
         }
         /* read ionex body */

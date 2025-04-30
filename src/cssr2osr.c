@@ -72,7 +72,11 @@ extern double prectrop(gtime_t time, const double *pos, const double *azel,
 }
 extern int selfreqpair(const int sat, const prcopt_t *opt,const obsd_t *obs)
 {
-    int optf=opt->posopt[10];
+    int optf,sys;
+    
+    sys=satsys(sat,NULL);
+    optf=(sys==SYS_GPS)?opt->posopt[10]:((sys==SYS_QZS)?opt->posopt[12]:0);
+    
     if (NFREQ==1||optf==POSL1) {
          return 0;
     }else {
@@ -211,7 +215,7 @@ extern int zdres(obsd_t *obs,
 
     for (i=0;i<n&&i<MAXOBS;i++) {
         int iodeflag = FALSE, prn;
-        double tmp_r=-1.0, tmp_dts;
+        double tmp_r=-1.0, tmp_dts=0.0;
         sat=obs[i].sat;
         lam=nav->lam[sat-1];
         sys=satsys(sat,&prn);

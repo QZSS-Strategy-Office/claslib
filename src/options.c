@@ -85,6 +85,7 @@ opt_t sysopts[]={
     {"pos1-posopt10",   3,  (void *)&prcopt_.posopt[9],  SWTOPT },
     {"pos1-posopt11",   3,  (void *)&prcopt_.posopt[10], FRQOPT2},
     {"pos1-posopt12",   3,  (void *)&prcopt_.posopt[11], SWTOPT },
+    {"pos1-posopt13",   3,  (void *)&prcopt_.posopt[12], FRQOPT2 },
     {"pos1-exclsats",   2,  (void *)exsats_,             "prn ..."},
     {"pos1-navsys",     0,  (void *)&prcopt_.navsys,     NAVOPT },
     {"pos1-gridsel",    0,  (void *)&prcopt_.gridsel,    "m"    },

@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     gtime_t ts={0},te={0};
     double tint=0.0,es[]={2000,1,1,0,0,0},ee[]={2000,12,31,23,59,59};
     int i,n,ret;
-    char *infile[MAXFILE],*outfile="rnx2rtkp";
+    char *infile[MAXFILE],outfile[1024]="rnx2rtkp";
     
     prcopt.mode  =PMODE_PPP_RTK;
     prcopt.navsys=SYS_GPS|SYS_QZS;
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
         }
     }
     for (i=1,n=0;i<argc;i++) {
-        if      (!strcmp(argv[i],"-o")&&i+1<argc) outfile=argv[++i];
+        if      (!strcmp(argv[i],"-o")&&i+1<argc) { strncpy(outfile, argv[++i], sizeof(outfile)-1); outfile[sizeof(outfile)-1]='\0'; }
         else if (!strcmp(argv[i],"-ts")&&i+2<argc) {
             sscanf(argv[++i],"%lf/%lf/%lf",es,es+1,es+2);
             sscanf(argv[++i],"%lf:%lf:%lf",es+3,es+4,es+5);

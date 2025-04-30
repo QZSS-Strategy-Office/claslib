@@ -1037,7 +1037,7 @@ static int execses(gtime_t ts, gtime_t te, double ti, const prcopt_t *popt,
     
     /* open debug trace */
     if (flag&&sopt->trace>0) {
-        if (*outfile) {
+        if (outfile && *outfile!='\0'){
             strcpy(tracefile,outfile);
             strcat(tracefile,".trace");
         }
@@ -1059,7 +1059,7 @@ static int execses(gtime_t ts, gtime_t te, double ti, const prcopt_t *popt,
     /* ISB */
     if (popt_.mode>=PMODE_PPP_RTK) setisb(&rtcm.nav, popt_.rectype[0], popt_.rectype[1], stas, stas+1);
     /* read ocean tide loading parameters */
-    if (popt_.mode>PMODE_SINGLE&&fopt->blq) {
+    if (popt_.mode>PMODE_SINGLE&&fopt->blq[0]!='\0') {
         if (popt_.tidecorr == 2) {
             /* station */
             readotl(&popt_,fopt->blq,stas);
@@ -1319,7 +1319,7 @@ extern int postpos(gtime_t ts, gtime_t te, double ti, double tu,
     trace(3,"postpos : ti=%.0f tu=%.0f n=%d outfile=%s\n",ti,tu,n,outfile);
     
     /* read grid data */
-    if (fopt->grid) {
+    if (fopt->grid[0]!='\0') {
         r = read_grid_def(fopt->grid);
         if (r != 0) {
             showmsg("grid file error: %s",fopt->grid);
