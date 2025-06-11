@@ -718,7 +718,7 @@ extern void getsysprnstr(char *exsatstr, int exsat, char *comma_str)
     }
     strcat(exsatstr, tmpstr);
 }
-void trace_slct_ch( rtk_t *rtk, const obsd_t *obs, int n, int order, int pch, int trace_level)
+void trace_slct_ch( rtk_t *rtk, const obsd_t *obs, int n, int order, int pch, int samefac, int trace_level)
 {
     prcopt_t *opt=&rtk->opt;
     char ch0[1024], ch1[1024], temp[1024];
@@ -732,6 +732,12 @@ void trace_slct_ch( rtk_t *rtk, const obsd_t *obs, int n, int order, int pch, in
             } else {
                 trace(trace_level, "--- ch select list ---  time:%s\n", time_str(obs[0].time,0));
             }
+			if (opt->l6mrg) {
+                sprintf(temp, "ch0:%d, ch1:%d", get_current_cssr_facility(0), get_current_cssr_facility(1));
+			} else {
+                sprintf(temp, "ch0:%d", get_current_cssr_facility(0));
+			}
+            trace(trace_level, "l6mrg:%d, samefac:%d[%s]\n", opt->l6mrg, samefac, temp);
         }
         sprintf(ch0, "ch0[L%d]:", f+1);
         sprintf(ch1, "ch1[L%d]:", f+1);
@@ -928,7 +934,7 @@ extern int ddres(rtk_t *rtk, const nav_t *nav, double *x, double *pbslip[SSR_CH_
 
                 if (order==FST && f<nf && opt->l6mrg && !samefac) {
                     /* two case for reset the phase bias */                    
-                    /* (1) if the reference satellite is changed and the dependent satellite that 
+                    /* (1) if the reference satellite is changed and the dependent satellite that */
                     /*     has selected a different ch from the previous ch of the changed reference satellite is reset */
                     /* (2) reset the satellite that selected a different channel from the previous one */
                     if ((pre_use_ch[f][sati]!=ch && refchgflg) || (pre_use_ch[f][satj]!=ch)) {
@@ -1015,7 +1021,7 @@ extern int ddres(rtk_t *rtk, const nav_t *nav, double *x, double *pbslip[SSR_CH_
         }
     } /* end of system loop */
     
-    trace_slct_ch(rtk,obs,n,order,pch,2);
+    trace_slct_ch(rtk,obs,n,order,pch,samefac,2);
     
     /* measurement error covariance */
     ddcov(nb,b,Ri,Rj,nv,R);
@@ -1540,9 +1546,6 @@ extern void ppp_rtk_pos(rtk_t *rtk, const obsd_t *obs, int n, nav_t *nav)
         }
     }
 
-    for (ch=0;ch<(opt->l6mrg?SSR_CH_NUM:1);ch++) {
-        nav->facility[ch] = get_current_cssr_facility(ch);
-    }
     check_cssr_facility(nav, grid.network, opt->l6mrg);
 
     for (ch=0;ch<(opt->l6mrg?SSR_CH_NUM:1);ch++) {

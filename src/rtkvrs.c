@@ -1522,11 +1522,14 @@ static void check_vrs_facility(nav_t *nav, const obsd_t *obs, int nu, int *nr, i
 
     for (ch=0;ch<(l6mrg?SSR_CH_NUM:1);ch++) {
         idx=(ch==0)?nu:nu+nr[0];
-        if (savefacility[ch] != -1 && savefacility[ch] != obs[idx].facility) {
-            trace(2, "VRS facility changed[ch:%d], %d ---> %d\n", ch, savefacility[ch], obs[idx].facility);
-            nav->filreset = TRUE;
+        if (savefacility[ch] != obs[idx].facility) {
+            if (savefacility[ch] != -1 ) {
+                trace(1, "VRS facility changed[ch:%d], %d ---> %d\n", ch, savefacility[ch], obs[idx].facility);
+                nav->filreset = TRUE;
+            } else {
+                trace(1, "VRS facility changed[ch:%d],    ---> %d\n", ch, obs[idx].facility);
+            }
         }
-        nav->facility[ch] = obs[idx].facility;
         savefacility[ch]  = obs[idx].facility;
     }
 }

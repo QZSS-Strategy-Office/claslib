@@ -926,7 +926,6 @@ extern int ssr2osr(rtk_t *rtk, obsd_t *obs, const int n, nav_t *nav,
     
     ch=0;
     nav->facility[ch] = get_current_cssr_facility(ch);
-    check_cssr_facility(nav, grid.network, opt->l6mrg);
     
     for (i = 0; i < MAXSAT; ++i) {
         update_global_cssr(&nav->ssr_ch[ch][i], i + 1, ch);
@@ -954,8 +953,6 @@ extern int ssr2osr(rtk_t *rtk, obsd_t *obs, const int n, nav_t *nav,
     if (!(k=zdres(obs,n,rs,dts,var,svh,nav,rtk->x,NULL,e,azel,rtk,TRUE,cpc_,pt0_,&grid,rtk->ssat,opt,&rtk->sol,osr,ch))){
         trace(2,"rover initial position error\n");
     }
-
-    if ((nav->filreset == TRUE) && (opt->mode==PMODE_SSR2OSR))  nav->filreset = FALSE;
 
     for (i=0; i<n; i++) {
         for (j=0; j<nf; j++) {

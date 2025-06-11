@@ -1,0 +1,31 @@
+
+CLASLIB: ver.0.8.2 Release Notes
+                                                                       2025/06/11
+--------------------------------------------------------------------------------
+New Features in ver.0.8.2
+(1) Supports two channels of L6 message input defined in chapter 4.1.1.2 of IS-QZSS-L6-007.
+(2) Supports L6 Message Type ID change in chapter 4.1.2.1(3) of IS-QZSS-L6-007.
+(3) Supports two L6 signal combination defined in chapter 5.5.7.2 of IS-QZSS-L6-007.
+
+Changes: ver.0.8.1 -> ver.0.8.2
+(1) The following source codes are added, deleted or changed.
+  (a) added
+    none
+
+  (b) deleted
+    none
+
+  (c) changed
+    cssr.c, cssr2osr.c, ppprtk.c, rtkvrs.c
+
+(2) SSR2OSR
+  (a) SSR2OSR supports two channels of L6 message input defined in chapter 4.1.1.2 of IS-QZSS-L6-007.
+  (b) SSR2OSR supports L6 Message Type ID change in chapter 4.1.2.1(3) of IS-QZSS-L6-007.
+
+(3) RNX2RTKP
+  (a) RNX2RTKP supports two channels of L6 message input defined in chapter 4.1.1.2 of IS-QZSS-L6-007.
+  (b) RNX2RTKP supports L6 Message Type ID change in chapter 4.1.2.1(3) of IS-QZSS-L6-007.
+  (c) RNX2RTKP supports two L6 signal combination defined in chapter 5.5.7.2 of IS-QZSS-L6-007.
+
+(4) SSR2OBS
+  (a) SSR2OBS supports two channels of L6 message input defined in Chapter 4.1.1.2 of IS-QZSS-L6-007.

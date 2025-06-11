@@ -70,9 +70,9 @@ NAV    = $(DATADIR)sept_2019239.nav
 CSSR   = $(DATADIR)2019239Q.l6
 NAV_ST12 = $(DATADIR)sept_2019349.nav
 CSSR_ST12 = $(DATADIR)2019349B.l6
-L6_CH1  = $(DATADIR)2024321RR.l6
-L6_CH2  = $(DATADIR)2024321RR_2.l6
-NAV_2CH = $(DATADIR)0627321RR.nav
+L6_CH1  = $(DATADIR)2025157U_ch1.l6
+L6_CH2  = $(DATADIR)2025157U_ch2.l6
+NAV_2CH = $(DATADIR)0627157U.nav
 
 # Dump of L6 message 
 test1d:
@@ -88,11 +88,11 @@ test1r_ST12:
 
 # Output in RINEX 3 format(CH1)
 test1r_CH1:
-	$(CMD) -k sample.conf -ts 2024/11/16 17:00:00 -te 2024/11/16 17:59:59 -ti 1 $(NAV_2CH) $(L6_CH1) -r -o $(DATADIR)2024321RR_CH1.obs
+	$(CMD) -k sample.conf -ts 2025/06/6 20:00:00 -te 2025/06/6 20:59:59 -ti 1 $(NAV_2CH) $(L6_CH1) -r -o $(DATADIR)2025157U_ch1.obs
 
 # Output in RINEX 3 format(CH2)
 test1r_CH2:
-	$(CMD) -k sample.conf -ts 2024/11/16 17:00:00 -te 2024/11/16 17:59:59 -ti 1 $(NAV_2CH) $(L6_CH2) -r -o $(DATADIR)2024321RR_CH2.obs
+	$(CMD) -k sample.conf -ts 2025/06/6 20:00:00 -te 2025/06/6 20:59:59 -ti 1 $(NAV_2CH) $(L6_CH2) -r -o $(DATADIR)2025157U_ch2.obs
 
 # Output in RTCM 3 MSM format
 test1m:

@@ -1408,20 +1408,25 @@ extern void check_cssr_facility(nav_t *nav, int network, int l6mrg)
 {
     static int savefacility[L6_CH_NUM] = {-1, -1};
     static int savenetwork[L6_CH_NUM] = {-1, -1};
+    static int savedelivery[L6_CH_NUM] = {-1, -1};
     int ch;
 
     for (ch=0;ch<(l6mrg?SSR_CH_NUM:1);ch++) {
-        if (savefacility[ch] != -1 && savefacility[ch] != CurrentCSSR[ch].facility) {
-            trace(2, "CSSR facility changed[ch:%d], %d ---> %d\n", ch, savefacility[ch] + 1, CurrentCSSR[ch].facility + 1);
-            nav->filreset = TRUE;
+        if (savefacility[ch] != CurrentCSSR[ch].facility) {
+            if (savefacility[ch] != -1) {
+                trace(1, "CSSR facility changed[ch:%d] %d(%d) ---> %d(%d)\n", ch, savefacility[ch] + 1, savedelivery[chidx], CurrentCSSR[ch].facility + 1, l6delivery[chidx]);
+                nav->filreset = TRUE;
+            } else {
+                trace(1, "CSSR facility changed[ch:%d]        ---> %d(%d)\n", ch, CurrentCSSR[ch].facility + 1, l6delivery[chidx]);
+            }
         }
         if (savenetwork[ch] != -1 && savenetwork[ch] != network) {
-            trace(2, "CSSR network changed[ch:%d], %d ---> %d\n", ch, savenetwork[ch], network);
+            trace(1, "CSSR network changed[ch:%d], %d ---> %d\n", ch, savenetwork[ch], network);
             if (nav->filreset != TRUE) {
                 nav->ionoreset = TRUE;
             }
         }
-        nav->facility[ch] = CurrentCSSR[ch].facility + 1;
+        savedelivery[chidx] = l6delivery[chidx];
         savefacility[ch] = CurrentCSSR[ch].facility;
         savenetwork[ch] = network;
     }
@@ -3801,8 +3806,6 @@ extern int read_grid_def(const char *gridfile)
 extern int decode_qzs_msg(rtcm_t *rtcm, int head, uint8_t *frame, FILE **ofp)
 {
     static int startdecode[L6_CH_NUM] = {0,};
-    static int savefacility[L6_CH_NUM] = {-1, -1};
-    static int savedelivery[L6_CH_NUM] = {-1, -1};
     static cssr_t _cssr[L6_CH_NUM] = {0,};
 
     cssr_t *cssr = &_cssr[chidx];
@@ -3874,18 +3877,6 @@ extern int decode_qzs_msg(rtcm_t *rtcm, int head, uint8_t *frame, FILE **ofp)
     
     trace(4, "cssr: frame=0x%02x, ctype=%d, subtype=%d\n", *frame, rtcm->ctype, rtcm->subtype);
     tow = time2gpst(timeget(), &week);
-    if (savefacility[chidx] != l6facility[chidx]) {
-        if (savefacility[chidx] != -1) {
-            trace(1, "L6 data[ch%d]: change facility, week=%d, tow=%.1f, %d(%d) ---> %d(%d)\n", chidx, week, tow,
-                  (savefacility[chidx] == -1 ? 0: savefacility[chidx]+1), (savefacility[chidx] == -1 ? 0: savedelivery[chidx]),
-                  l6facility[chidx]+1, l6delivery[chidx]);
-        } else {
-            trace(1, "L6 data[ch%d]: change facility, week=%d, tow=%.1f,        ---> %d(%d)\n", chidx, week, tow,
-                  l6facility[chidx]+1, l6delivery[chidx]);
-        }
-        savedelivery[chidx] = l6delivery[chidx];
-        savefacility[chidx] = l6facility[chidx];
-    }
     
     switch (rtcm->subtype) {
         case CSSR_TYPE_MASK:
@@ -4068,6 +4059,29 @@ static void output_cssr_header(int chidx, int *nframe, unsigned char buff[][BLEN
     return;
 }
 
+extern int get_correct_fac(int msgid) {
+    int fac = (msgid & 0x18) >> 3;
+    int ptn = (msgid & 0x06) >> 1;
+
+    if (ptn == 0) {
+        switch(fac) {
+            case 0: return 0;
+            case 1: return 2;
+            case 2: return 1;
+            case 3: return 3;
+            default: return -1;
+        }
+    } else {
+        switch(fac) {
+            case 0: return 2;
+            case 1: return 0;
+            case 2: return 3;
+            case 3: return 1;
+            default: return -1;
+        }
+    }
+}
+
 /* decode cssr messages in the QZS L6 subframe */
 extern int input_cssr(rtcm_t *cssr, unsigned char data, uint8_t *frame, FILE **ofp)
 {
@@ -4109,7 +4123,7 @@ extern int input_cssr(rtcm_t *cssr, unsigned char data, uint8_t *frame, FILE **o
     }
 
     l6delivery[chidx] = prn;
-    l6facility[chidx] = (msgid & 0x18) >> 3;
+    l6facility[chidx] = get_correct_fac(msgid);
 
     if (msgid & 0x01) { /* Subframe indicator */
         if (decode_start[chidx] == 0) {
@@ -4197,7 +4211,7 @@ extern int dumpcssr(char **infile, int n, FILE **ofp, filopt_t *fopt){
     if (read_grid_def(fopt->grid)) {
         fprintf(stderr, "Grid file read error. %s\n", fopt->grid);
         showmsg("Grid file read error. %s\n", fopt->grid);
-	    fclose(fp);
+        fclose(fp);
         return -1;
     }
 
@@ -4206,7 +4220,7 @@ extern int dumpcssr(char **infile, int n, FILE **ofp, filopt_t *fopt){
             break;
         }
     }
-	fclose(fp);
+    fclose(fp);
     return 0;
 }
 
@@ -4335,7 +4349,7 @@ extern int open_outputfiles(FILE **ofp)
     if (!(ofp[10]=fopen(filename, "w"))) {
         return -1;
     }
-    fprintf(ofp[10], "Epoch Time,Preamble,PRN,L6 message type ID,Vender ID,Message Generation Facility ID,CLAS Transmit Pattern ID,Subframe indicator,Alert Flag\n");
+    fprintf(ofp[10], "Epoch Time,Preamble,PRN,L6 message type ID,Vender ID,Message Generation Facility ID and CLAS Transmit Pattern ID,CLAS Transmit Pattern ID,Subframe indicator,Alert Flag\n");
 
     return 0;
 }
