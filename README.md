@@ -247,6 +247,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
   - Supported L6 Message Type ID change in chapter 4.1.2.1(3) of IS-QZSS-L6-007: RNX2RTKP, SSR2OBS
   - Supported two L6 signal combination defined in chapter 5.5.7.2 of IS-QZSS-L6-007: RNX2RTKP
   - Added release notes "relnotes_0.8.2.txt"
+* 2026/03/31 0.8.3
+  - There are no changes to SSR2OSR and SSR2OBS. This revision is due to changes in the recommended parameters of the RNX2RTKP configuration files.
+  - Added release notes "relnotes_0.8.3.txt"
 
 # Notes
 * Note 1: CLAS message archives is avaiable at

@@ -1,0 +1,15 @@
+
+CLASLIB: ver.0.8.3 Release Notes
+                                                                       2026/03/31
+--------------------------------------------------------------------------------
+
+New Features in ver.0.8.3
+  noneiminor updatej
+
+
+Changes: ver.0.8.2 -> ver.0.8.3
+
+There are no changes to SSR2OSR and SSR2OBS.
+This revision is due to a change in the recommended value of the pos2-armaxdelsat parameter,
+stats-stdiono parameter and stats-prnionomax parameterin the RNX2RTKP configuration file
+to optimize for ionospheric disturbances.
