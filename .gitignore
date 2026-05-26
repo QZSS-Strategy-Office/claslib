@@ -54,9 +54,6 @@ $RECYCLE.BIN/
 # =========================
 
 obj/
-util/ssr2osr/ssr2osr
-util/ssr2obs/ssr2obs
-util/rnx2rtkp/rnx2rtkp
 
 # EOF
 

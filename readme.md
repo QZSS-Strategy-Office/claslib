@@ -1,11 +1,9 @@
 # CLASLIB (CLAS test library)-P/PS
 
-## Modifications from original
+## Modifications by yoronneko
 
-- added ssr2osr and ssr2obs from [CLAS Test Library](https://qzss.go.jp/en/technical/dod/clas/clas_test-library.html)
-- [rearranged direcrory](https://s-taka.org/en/first-trial-of-claslib/#investigation-of-source-code-derived), [organized compile options](https://s-taka.org/en/first-trial-of-claslib/#organize-compile-options)
-- temporally modified for linux execution
-- added tests; please execute "make" command in util/ directory to execute the result tests for ssr2osr, ssr2obs, and rnx2trkp
+- adds ssr2osr and ssr2obs from [CLAS Test Library](https://qzss.go.jp/en/technical/dod/clas/clas_test-library.html)
+- [rearranges direcrory](https://s-taka.org/en/first-trial-of-claslib/#investigation-of-source-code-derived), [organizes compile options](https://s-taka.org/en/first-trial-of-claslib/#organize-compile-options)
 
 ## Overview
 
@@ -29,7 +27,7 @@ GSILIB (version.1.0.3, Ref. Note 4).
 - [readme_rtklib.txt](readme_rtklib.txt)
 
 ### doc directory
+- [claslib-sourcecode-licence.pdf](docs/claslib-sourcecode-licence.pdf)
+- [manual-claslib.pdf](docs/manual-claslib.pdf)
+- [relnotes/](docs/relnotes/)
 
-- [claslib-sourcecode-licence.pdf](doc/claslib-sourcecode-licence.pdf)
-- [manual-claslib.pdf](doc/manual-claslib.pdf)
-- [relnotes/](doc/relnotes/)

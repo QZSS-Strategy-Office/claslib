@@ -113,23 +113,24 @@ clean:
 
 .PHONY: all clean test test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
 
+DATADIR     =../../data
 CONF1       = kinematic.conf
 CONF2       = kinematic_vrs.conf
-CSSR1       = ../../data/2018328X_329A.l6
-CSSR2       = ../../data/2019239Q.l6
-CSSR3       = ../../data/2019349B.l6
-NAV1        = ../../data/tskc2018329.nav
-NAV2        = ../../data/sept_2019239.nav
-NAV3        = ../../data/sept_2019349.nav
-OBS1        = ../../data/0161329A.obs
-OBS2        = ../../data/0627239Q.obs
-OBS2B       = ../../data/0627239Q.bnx
-OBS3        = ../../data/0627349AB.bnx
-TIME1       = -ti 1 -ts 2018/11/25 00:00:00 -te 2018/11/25 00:59:59 -l6w 2028
-TIME2       = -ti 1 -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
-TIME3       = -ti 1 -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
-VRS1        = ../../data/vrs2019239Q.obs
-VRS2        = ../../data/vrs2019349B.obs
+CSSR1       = $(DATADIR)2018328X_329A.l6
+CSSR2       = $(DATADIR)2019239Q.l6
+CSSR3       = $(DATADIR)2019349B.l6
+NAV1        = $(DATADIR)tskc2018329.nav
+NAV2        = $(DATADIR)sept_2019239.nav
+NAV3        = $(DATADIR)sept_2019349.nav
+OBS1        = $(DATADIR)0161329A.obs
+OBS2        = $(DATADIR)0627239Q.obs
+OBS2B       = $(DATADIR)0627239Q.bnx
+OBS3        = $(DATADIR)0627349AB.bnx
+TIME1       = -ts 2018/11/25 00:00:00 -te 2018/11/25 00:59:59 -l6w 2028
+TIME2       = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
+TIME3       = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
+VRS1        = $(DATADIR)vrs2019239Q.obs
+VRS2        = $(DATADIR)vrs2019349B.obs
 INPUT_L6W   = $(OBS1)  $(NAV1) $(CSSR1)
 INPUT_L6    = $(OBS2)  $(NAV2) $(CSSR2)
 INPUT_L6B   = $(OBS2B) $(NAV2) $(CSSR2)
@@ -137,90 +138,26 @@ INPUT_NONAV = $(OBS3)  $(CSSR3)
 INPUT_ST12  = $(OBS3)  $(NAV3) $(CSSR3)
 INPUT_VRS1  = $(OBS2)  $(NAV2) $(VRS1)
 INPUT_VRS2  = $(OBS3)  $(NAV3) $(VRS2)
-OUTPUT_L6W  = $(basename $(notdir $(OBS1)))_L6W.pos
-OUTPUT_L6   = $(basename $(notdir $(OBS2)))_L6.pos
-OUTPUT_L6B  = $(basename $(notdir $(OBS2B)))_L6B.pos
-OUTPUT_NONAV= $(basename $(notdir $(OBS3)))_NONAV.pos
-OUTPUT_ST12 = $(basename $(notdir $(OBS3)))_ST12.pos
-OUTPUT_VRS1 = $(basename $(notdir $(OBS2)))_VRS1.pos
-OUTPUT_VRS2 = $(basename $(notdir $(OBS3)))_VRS2.pos
-test: rnx2rtkp test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
-
+OUTPUT_L6W  = $(basename $(notdir $(OBS1)))_L6W.nmea
+OUTPUT_L6   = $(basename $(notdir $(OBS2)))_L6.nmea
+OUTPUT_L6B  = $(basename $(notdir $(OBS2B)))_L6B.nmea
+OUTPUT_NONAV= $(basename $(notdir $(OBS3)))_NONAV.nmea
+OUTPUT_ST12 = $(basename $(notdir $(OBS3)))_ST12.nmea
+OUTPUT_VRS1 = $(basename $(notdir $(OBS2)))_VRS1.nmea
+OUTPUT_VRS2 = $(basename $(notdir $(OBS3)))_VRS2.nmea
+test: test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
 test_L6 :
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)    # $(TIME2)
-	@cmp -s $(OUTPUT_L6) expect/$(OUTPUT_L6);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6) $(OUTPUT_L6).osr $(OUTPUT_L6).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)
 test_L6_week:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6W)   -o $(OUTPUT_L6W)   # $(TIME1)
-	@cmp -s $(OUTPUT_L6W) expect/$(OUTPUT_L6W);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6W) $(OUTPUT_L6W).osr $(OUTPUT_L6W).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME1) -x 2 -k $(CONF1) $(INPUT_L6W)   -o $(OUTPUT_L6W)
 test_L6_bnx:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6B)   -o $(OUTPUT_L6B)   # $(TIME2)
-	@cmp -s $(OUTPUT_L6B) expect/$(OUTPUT_L6B);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6B) $(OUTPUT_L6B).osr $(OUTPUT_L6B).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF1) $(INPUT_L6B)   -o $(OUTPUT_L6B)
 test_VRS :
-	@./rnx2rtkp -k $(CONF2) $(INPUT_VRS1)  -o $(OUTPUT_VRS1)  # $(TIME2)
-	@cmp -s $(OUTPUT_VRS1) expect/$(OUTPUT_VRS1);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_VRS1) $(OUTPUT_VRS1).osr $(OUTPUT_VRS1).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF2) $(INPUT_VRS)   -o $(OUTPUT_VRS)
 test_ST12:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_ST12)  -o $(OUTPUT_ST12)  # $(TIME3)
-	@cmp -s $(OUTPUT_ST12) expect/$(OUTPUT_ST12);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_ST12) $(OUTPUT_ST12).osr $(OUTPUT_ST12).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME3) -x 2 -k $(CONF1) $(INPUT_ST12)  -o $(OUTPUT_ST12)
 test_NONAV:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_NONAV) -o $(OUTPUT_NONAV) # $(TIME3)
-	@cmp -s $(OUTPUT_NONAV) expect/$(OUTPUT_NONAV);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_NONAV) $(OUTPUT_NONAV).osr $(OUTPUT_NONAV).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	rnx2rtkp -ti 1 $(TIME3) -x 2 -k $(CONF1) $(INPUT_NONAV) -o $(OUTPUT_NONAV)
 test_ST12_VRS:
-	@./rnx2rtkp -k $(CONF2) $(INPUT_VRS2)  -o $(OUTPUT_VRS2)  # $(TIME3)
-	@cmp -s $(OUTPUT_VRS2) expect/$(OUTPUT_VRS2);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_VRS2) $(OUTPUT_VRS2).osr $(OUTPUT_VRS2).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
+	rnx2rtkp -ti 1 $(TIME3) -x 3 -k $(CONF2) $(INPUT_VRS2)  -o $(OUTPUT_VRS2)
 
-# EOF

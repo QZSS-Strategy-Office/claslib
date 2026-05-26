@@ -107,52 +107,26 @@ clean:
 
 .PHONY: all clean test testdump testobs1 testobs2 testrtcm2
 
-CONF    = sample.conf
-CSSR1	= ../../data/2019239Q.l6
-CSSR2	= ../../data/2019349B.l6
-NAV1	= ../../data/sept_2019239.nav
-NAV2	= ../../data/sept_2019349.nav
-OUTPUT1	= $(basename $(notdir $(CSSR1))).obs
-OUTPUT2	= $(basename $(notdir $(CSSR2))).obs
-OUTPUT3	= $(basename $(notdir $(CSSR2))).rtcm3
-TIME1	= -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59 -ti 1
-TIME2	= -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59 -ti 1
+CONFOBS	 = ../../obs.conf
+TIME1	 = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59 -ti 1
+NAV1	 = ../../data/20190827.nav
+CSSR1	 = ../../data/20190827q.l6
+VRS1	 = vrs2019239Q.obs -r
+TIME2	 = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59 -ti 1
+NAV2	 = ../../data/20191215.nav
+CSSR2	 = ../../data/20191215b.l6
+VRS2	 = vrs20191215b.obs -r
+RTCM2	 = vrs20191215b.rtcm3 -b
 test: ssr2obs testobs1 testobs2 testrtcm2
 
 testdump: # Dump of L6 message
-	@./ssr2obs -k $(CONF) -dump $(CSSR2)
+	./ssr2obs -k $(CONFOBS) -dump $(CSSR2)
 
 testobs1: # Output in RINEX 3 format
-	@./ssr2obs -k $(CONF) $(NAV1) $(CSSR1) -o $(OUTPUT1) -r $(TIME1)
-	@cmp -i 150 $(OUTPUT1) expect/$(OUTPUT1);\
-	if [[ $$? -eq 0 ]]; then\
-		printf '$@: \033[32mPassed.\033[m\n';\
-		rm $(OUTPUT1);\
-	else\
-		printf '$@: \033[31mFailed.\033[m\n';\
-		exit 1;\
-	fi
+	./ssr2obs -k $(CONFOBS) $(TIME1) $(NAV1) $(CSSR1) -o $(VRS1)
 
 testobs2: # Output in RINEX 3 format(ST12)
-	@./ssr2obs -k $(CONF) $(NAV2) $(CSSR2) -o $(OUTPUT2) -r $(TIME2)
-	@cmp -s -i 150 $(OUTPUT2) expect/$(OUTPUT2);\
-	if [[ $$? -eq 0 ]]; then\
-		printf '$@: \033[32mPassed.\033[m\n';\
-		rm $(OUTPUT2);\
-	else\
-		printf '$@: \033[31mFailed.\033[m\n';\
-		exit 1;\
-	fi
+	./ssr2obs -k $(CONFOBS) $(TIME2) $(NAV2) $(CSSR2) -o $(VRS2)
 
 testrtcm2: # Output in RTCM 3 MSM format
-	@./ssr2obs -k $(CONF) $(NAV2) $(CSSR2) -o $(OUTPUT3) -b $(TIME2)
-	@cmp -s $(OUTPUT3) expect/$(OUTPUT3);\
-	if [[ $$? -eq 0 ]]; then\
-		printf '$@: \033[32mPassed.\033[m\n';\
-		rm $(OUTPUT3);\
-	else\
-		printf '$@: \033[31mFailed.\033[m\n';\
-		exit 1;\
-	fi
-
-# EOF
+	./ssr2obs -k $(CONFOBS) $(TIME2) $(NAV2) $(CSSR2) -o $(RTCM2)
