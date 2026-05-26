@@ -107,7 +107,7 @@ clean:
 
 .PHONY: all clean test testdump testobs1 testobs2 testrtcm2
 
-CONFOBS	 = sample.conf
+CONFOBS	 = ../../obs.conf
 TIME1	 = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59 -ti 1
 NAV1	 = ../../data/20190827.nav
 CSSR1	 = ../../data/20190827q.l6

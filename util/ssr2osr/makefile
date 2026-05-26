@@ -105,7 +105,7 @@ clean:
 
 .PHONY: all clean test testdump testnmea1 testnmea2
 
-CONFOSR	 = sample.conf
+CONFOSR	 = ../../osr.conf
 TIME1	 = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59 -ti 1
 TIME1	 =
 OBS1	 = ../../data/20190827q.obs
