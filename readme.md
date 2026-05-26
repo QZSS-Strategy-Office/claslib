@@ -1,10 +1,9 @@
 # CLASLIB (CLAS test library)-P/PS
 
-## Modifications from original
+## Modifications by yoronneko
 
-- added ssr2osr and ssr2obs from [CLAS Test Library](https://qzss.go.jp/en/technical/dod/clas/clas_test-library.html)
-- [rearranged direcrory](https://s-taka.org/en/first-trial-of-claslib/#investigation-of-source-code-derived), [organized compile options](https://s-taka.org/en/first-trial-of-claslib/#organize-compile-options)
-- temporally modified for linux execution
+- adds ssr2osr and ssr2obs from [CLAS Test Library](https://qzss.go.jp/en/technical/dod/clas/clas_test-library.html)
+- [rearranges direcrory](https://s-taka.org/en/first-trial-of-claslib/#investigation-of-source-code-derived), [organizes compile options](https://s-taka.org/en/first-trial-of-claslib/#organize-compile-options)
 
 ## Overview
 
