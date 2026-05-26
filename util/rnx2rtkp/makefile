@@ -144,7 +144,7 @@ OUTPUT_NONAV= $(basename $(notdir $(OBS3)))_NONAV.pos
 OUTPUT_ST12 = $(basename $(notdir $(OBS3)))_ST12.pos
 OUTPUT_VRS1 = $(basename $(notdir $(OBS2)))_VRS1.pos
 OUTPUT_VRS2 = $(basename $(notdir $(OBS3)))_VRS2.pos
-test: rnx2rtkp test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
+test: test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
 
 test_L6 :
 	@./rnx2rtkp -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)    # $(TIME2)
