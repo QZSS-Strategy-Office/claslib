@@ -105,25 +105,26 @@ clean:
 
 .PHONY: all clean test testdump testnmea1 testnmea2
 
-CONF	 = sample.conf
-CSSR1	 = ../../data/2019239Q.l6
-CSSR2	 = ../../data/2019349B.l6
-OUTPUT1	 = $(basename $(notdir $(OBS1))).pos
-OUTPUT2	 = $(basename $(notdir $(OBS2))).pos
-NAV1	 = ../../data/sept_2019239.nav
-NAV2	 = ../../data/sept_2019349.nav
-OBS1	 = ../../data/0627239Q.obs
-OBS2	 = ../../data/0627349AB.bnx
+CONFOSR	 = sample.conf
 TIME1	 = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59 -ti 1
+TIME1	 =
+OBS1	 = ../../data/20190827q.obs
+NAV1	 = ../../data/20190827.nav
+CSSR1	 = ../../data/20190827q.l6
+LLH1	 = $(basename $(notdir $(OBS1))).llh
 TIME2	 = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59 -ti 1
+TIME2	 =
+OBS2	 = ../../data/20191215b.bnx
+CSSR2	 = ../../data/20191215b.l6
+LLH2	 = $(basename $(notdir $(OBS2))).llh
 
-test: ssr2osr test1 test2
+test: ssr2osr testnmea1 testnmea2
 
 testdump : # Dump of L6 message
-	./ssr2osr -k $(CONF) -dump $(CSSR2)
+	./ssr2osr -k $(CONFOSR) -dump $(CSSR2)
 
-test1 : # Output corrections represented in observation space (OSR)
-	./ssr2osr -k $(CONF) $(OBS1) $(NAV1) $(CSSR1) -o $(OUTPUT1) # $(TIME1)
+testnmea1 : # Output corrections represented in observation space (OSR)
+	./ssr2osr -k $(CONFOSR) $(TIME1) $(OBS1) $(NAV1) $(CSSR1) -o $(LLH1)
 
-test2 : # Output corrections represented in observation space (OSR-ST12)
-	./ssr2osr -k $(CONF) $(OBS2) $(NAV2) $(CSSR2) -o $(OUTPUT2) # $(TIME2)
+testnmea2 : # Output corrections represented in observation space (OSR-ST12)
+	./ssr2osr -k $(CONFOSR) $(TIME2) $(OBS2) $(CSSR2) -o $(LLH2)

@@ -65,11 +65,11 @@ CMD = ./ssr2osr$(EXT)
 
 CONF   = sample.conf
 
-# OPTT   = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
+OPTT   = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
 OBS    = $(DATADIR)0627239Q.obs
 NAV    = $(DATADIR)sept_2019239.nav
 CSSR   = $(DATADIR)2019239Q.l6
-# OPTT_ST12 = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
+OPTT_ST12 = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
 OBS_ST12  = $(DATADIR)0627349AB.bnx
 NAV_ST12  = $(DATADIR)sept_2019349.nav
 CSSR_ST12 = $(DATADIR)2019349B.l6
@@ -85,7 +85,7 @@ test1d :
 	
 # Output corrections represented in observation space (OSR)
 test1 :
-	$(CMD) $(OPTT) -k $(CONF) $(INPUT) -o $(OUTPUT)
+	$(CMD) -ti 1 $(OPTT) -x 2 -k $(CONF) $(INPUT) -o $(OUTPUT)
 # Output corrections represented in observation space (OSR) (ST12)
 test1_ST12 :
 	$(CMD) -ti 1 $(OPTT_ST12) -x 2 -k $(CONF) $(INPUT_ST12) -o $(OUTPUT_ST12)
