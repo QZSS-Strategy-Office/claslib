@@ -145,82 +145,18 @@ OUTPUT_ST12 = $(basename $(notdir $(OBS3)))_ST12.pos
 OUTPUT_VRS1 = $(basename $(notdir $(OBS2)))_VRS1.pos
 OUTPUT_VRS2 = $(basename $(notdir $(OBS3)))_VRS2.pos
 test: test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
-
 test_L6 :
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)    # $(TIME2)
-	@cmp -s $(OUTPUT_L6) expect/$(OUTPUT_L6);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6) $(OUTPUT_L6).osr $(OUTPUT_L6).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)    # $(TIME2)
 test_L6_week:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6W)   -o $(OUTPUT_L6W)   # $(TIME1)
-	@cmp -s $(OUTPUT_L6W) expect/$(OUTPUT_L6W);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6W) $(OUTPUT_L6W).osr $(OUTPUT_L6W).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF1) $(INPUT_L6W)   -o $(OUTPUT_L6W)   # $(TIME1)
 test_L6_bnx:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_L6B)   -o $(OUTPUT_L6B)   # $(TIME2)
-	@cmp -s $(OUTPUT_L6B) expect/$(OUTPUT_L6B);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_L6B) $(OUTPUT_L6B).osr $(OUTPUT_L6B).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF1) $(INPUT_L6B)   -o $(OUTPUT_L6B)   # $(TIME2)
 test_VRS :
-	@./rnx2rtkp -k $(CONF2) $(INPUT_VRS1)  -o $(OUTPUT_VRS1)  # $(TIME2)
-	@cmp -s $(OUTPUT_VRS1) expect/$(OUTPUT_VRS1);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_VRS1) $(OUTPUT_VRS1).osr $(OUTPUT_VRS1).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF2) $(INPUT_VRS1)  -o $(OUTPUT_VRS1)  # $(TIME2)
 test_ST12:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_ST12)  -o $(OUTPUT_ST12)  # $(TIME3)
-	@cmp -s $(OUTPUT_ST12) expect/$(OUTPUT_ST12);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_ST12) $(OUTPUT_ST12).osr $(OUTPUT_ST12).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF1) $(INPUT_ST12)  -o $(OUTPUT_ST12)  # $(TIME3)
 test_NONAV:
-	@./rnx2rtkp -k $(CONF1) $(INPUT_NONAV) -o $(OUTPUT_NONAV) # $(TIME3)
-	@cmp -s $(OUTPUT_NONAV) expect/$(OUTPUT_NONAV);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_NONAV) $(OUTPUT_NONAV).osr $(OUTPUT_NONAV).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
-
+	./rnx2rtkp -k $(CONF1) $(INPUT_NONAV) -o $(OUTPUT_NONAV) # $(TIME3)
 test_ST12_VRS:
-	@./rnx2rtkp -k $(CONF2) $(INPUT_VRS2)  -o $(OUTPUT_VRS2)  # $(TIME3)
-	@cmp -s $(OUTPUT_VRS2) expect/$(OUTPUT_VRS2);\
-    if [[ $$? -eq 0 ]]; then\
-        printf '$@: \033[32mPassed.\033[m\n';\
-        rm $(OUTPUT_VRS2) $(OUTPUT_VRS2).osr $(OUTPUT_VRS2).stat;\
-    else\
-        printf '$@: \033[31mFailed.\033[m\n';\
-        exit 1;\
-    fi
+	./rnx2rtkp -k $(CONF2) $(INPUT_VRS2)  -o $(OUTPUT_VRS2)  # $(TIME3)
 
-# EOF

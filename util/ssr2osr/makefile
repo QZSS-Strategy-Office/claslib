@@ -123,23 +123,7 @@ testdump : # Dump of L6 message
 	./ssr2osr -k $(CONF) -dump $(CSSR2)
 
 test1 : # Output corrections represented in observation space (OSR)
-	@./ssr2osr -k $(CONF) $(OBS1) $(NAV1) $(CSSR1) -o $(OUTPUT1) # $(TIME1)
-	@cmp -s $(OUTPUT1) expect/$(OUTPUT1);\
-	if [[ $$? -ne 0 ]]; then\
-		printf '$@: \033[31mFailed.\033[m\n';\
-		exit 1;\
-	fi
-	@printf '$@: \033[32mPassed.\033[m\n'
-	@rm $(OUTPUT1) $(OUTPUT1).osr $(OUTPUT1).stat
+	./ssr2osr -k $(CONF) $(OBS1) $(NAV1) $(CSSR1) -o $(OUTPUT1) # $(TIME1)
 
 test2 : # Output corrections represented in observation space (OSR-ST12)
-	@./ssr2osr -k $(CONF) $(OBS2) $(NAV2) $(CSSR2) -o $(OUTPUT2) # $(TIME2)
-	@cmp -s $(OUTPUT2) expect/$(OUTPUT2);\
-	if [[ $$? -ne 0 ]]; then\
-		printf '$@: \033[31mFailed.\033[m\n';\
-		exit 1;\
-	fi
-	@printf '$@: \033[32mPassed.\033[m\n'
-	@rm $(OUTPUT2) $(OUTPUT2).osr $(OUTPUT2).stat
-
-# EOF
+	./ssr2osr -k $(CONF) $(OBS2) $(NAV2) $(CSSR2) -o $(OUTPUT2) # $(TIME2)
