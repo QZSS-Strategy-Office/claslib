@@ -1,163 +1,151 @@
 # makefile for rnx2rtkp
 
-CC		 = gcc
-CFLAGS	 = \
-			-DENA_PPP_RTK \
-			-DENA_REL_VRS \
-			-DENAGAL \
-			-DENAQZS \
-			-DLAPACK \
-			-DNEXOBS=2 \
-			-DNFREQ=3 \
-			-DTRACE \
-			-I$(DIRCLAS) \
-			-I$(DIRRTKLIB) \
-			-O3 \
-			-Wall \
-			-g \
+ifeq ($(OS),Windows_NT)
+    # for MinGW
+    CC = i686-w64-mingw32-gcc
+    EXT=.exe
+    CFLAGS  = -Wall -O3 -ansi -pedantic -I$(SRC) $(OPTS)
+    CFLAGS += -DWIN32
+    LDLIBS  = -lm
+    LDLIBS += -lwinmm
+    DATADIR = ..\\..\\data\\
+else
+    # for gcc
+    CC = gcc
+    EXT=
+    # without lapack
+    #CFLAGS  = -Wall -O3 -ansi -pedantic -I$(SRC) $(OPTS)
+    #LDLIBS  = -lm
+    # with lapack
+    CFLAGS  = -Wall -O3 -ansi -pedantic -I$(SRC) $(OPTS)
+    CFLAGS += -DLAPACK
+    LDLIBS  = -lm
+    LDLIBS += -llapack -lblas
+    DATADIR = ../../data/
+endif
 
-LIBS   = \
-			-lblas \
-			-llapack \
-			-lm \
-			-lpthread \
 
-RTKLIB	  = \
-			ephemeris.c \
-			geoid.c \
-			ionex.c \
-			lambda.c \
-			options.c \
-			pntpos.c \
-			postpos.c \
-			ppp.c \
-			ppp_ar.c \
-			preceph.c \
-			qzslex.c \
-			rcvraw.c \
-			rinex.c \
-			rtcm.c \
-			rtcm2.c \
-			rtcm3.c \
-			rtcm3e.c \
-			rtkcmn.c \
-			rtkpos.c \
-			sbas.c \
-			solution.c \
 
-GSILIB	  = \
-			isb.c \
+SRC     = ../../src
+RCV_SRC = ../../src/rcv
 
-CLAS	  = \
-			cssr.c \
-			cssr2osr.c \
-			grid.c \
-			ppprtk.c \
-			rtkvrs.c \
-			stec.c \
+OPTS    = -DTRACE -DENAGAL -DENAQZS -DNFREQ=3
+OPTS   += -DENA_PPP_RTK
+OPTS   += -DENA_REL_VRS
 
-RCV		 = \
-			binex.c \
-			crescent.c \
-			gw10.c \
-			javad.c \
-			novatel.c \
-			nvs.c \
-			rcvlex.c \
-			rt17.c \
-			skytraq.c \
-			ss2.c \
-			ublox.c \
 
-DIRCLAS	 = ../../src/claslib
-DIRGSILIB= ../../src/gsilib
-DIRRCV	 = ../../src/rcv
-DIRRTKLIB= ../../src/rtklib
-DIROBJ	 = obj
-OBJS	 = $(addprefix $(DIROBJ)/, \
-			$(CLAS:.c=.o) \
-			$(GSILIB:.c=.o) \
-			$(RCV:.c=.o) \
-			$(RTKLIB:.c=.o))
-TARGETS	 = rnx2rtkp
 
-all: $(TARGETS)
 
-ssr2obs: $(OBJS) $(DIROBJ)/ssr2obs.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+SRCS  = rtkcmn.c rinex.c rtkpos.c postpos.c solution.c lambda.c geoid.c sbas.c \
+		preceph.c pntpos.c ephemeris.c options.c ppp.c ppp_ar.c rtcm.c rtcm2.c \
+		rtcm3.c rtcm3e.c ionex.c qzslex.c rcvraw.c
+SRCS += stec.c
+SRCS += isb.c
+SRCS += grid.c cssr.c
+SRCS += ppprtk.c cssr2osr.c
+SRCS += rtkvrs.c
 
-ssr2osr: $(OBJS) $(DIROBJ)/ssr2osr.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+RCV_SRCS = binex.c gw10.c novatel.c skytraq.c ublox.c crescent.c javad.c nvs.c \
+		   ss2.c rt17.c
 
-rnx2rtkp: $(OBJS) $(DIROBJ)/rnx2rtkp.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+OBJS = $(SRCS:.c=.o)
+RCV_OBJS = $(RCV_SRCS:.c=.o)
 
-$(DIROBJ)/%.o: $(DIRCLAS)/%.c
-	mkdir -p $(DIROBJ)
-	$(CC) -c -o $@ $< $(CFLAGS)
+all        : rnx2rtkp
 
-$(DIROBJ)/%.o: $(DIRRCV)/%.c
-	mkdir -p $(DIROBJ)
-	$(CC) -c -o $@ $< $(CFLAGS)
+-include makefile.depend
 
-$(DIROBJ)/%.o: $(DIRRTKLIB)/%.c
-	mkdir -p $(DIROBJ)
-	$(CC) -c -o $@ $< $(CFLAGS)
+rnx2rtkp.o : rnx2rtkp.c
+	$(CC) -c $(CFLAGS) $<
 
-$(DIROBJ)/%.o: $(DIRGSILIB)/%.c
-	mkdir -p $(DIROBJ)
-	$(CC) -c -o $@ $< $(CFLAGS)
+rnx2rtkp   : rnx2rtkp.o $(OBJS) $(RCV_OBJS)
 
-clean:
-	rm -rf $(DIROBJ) $(TARGETS) *.csv *.obs *.rtcm3
+%.o : $(SRC)/%.c
+	$(CC) -c $(CFLAGS) -o $@ $<
 
-.PHONY: all clean test test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
+%.o : $(RCV_SRC)/%.c
+	$(CC) -c $(CFLAGS) -o $@ $<
 
-DATADIR     =../../data
-CONF1       = kinematic.conf
-CONF2       = kinematic_vrs.conf
-CSSR1       = $(DATADIR)2018328X_329A.l6
-CSSR2       = $(DATADIR)2019239Q.l6
-CSSR3       = $(DATADIR)2019349B.l6
-NAV1        = $(DATADIR)tskc2018329.nav
-NAV2        = $(DATADIR)sept_2019239.nav
-NAV3        = $(DATADIR)sept_2019349.nav
-OBS1        = $(DATADIR)0161329A.obs
-OBS2        = $(DATADIR)0627239Q.obs
-OBS2B       = $(DATADIR)0627239Q.bnx
-OBS3        = $(DATADIR)0627349AB.bnx
-TIME1       = -ts 2018/11/25 00:00:00 -te 2018/11/25 00:59:59 -l6w 2028
-TIME2       = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
-TIME3       = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
-VRS1        = $(DATADIR)vrs2019239Q.obs
-VRS2        = $(DATADIR)vrs2019349B.obs
-INPUT_L6W   = $(OBS1)  $(NAV1) $(CSSR1)
-INPUT_L6    = $(OBS2)  $(NAV2) $(CSSR2)
-INPUT_L6B   = $(OBS2B) $(NAV2) $(CSSR2)
-INPUT_NONAV = $(OBS3)  $(CSSR3)
-INPUT_ST12  = $(OBS3)  $(NAV3) $(CSSR3)
-INPUT_VRS1  = $(OBS2)  $(NAV2) $(VRS1)
-INPUT_VRS2  = $(OBS3)  $(NAV3) $(VRS2)
-OUTPUT_L6W  = $(basename $(notdir $(OBS1)))_L6W.nmea
-OUTPUT_L6   = $(basename $(notdir $(OBS2)))_L6.nmea
-OUTPUT_L6B  = $(basename $(notdir $(OBS2B)))_L6B.nmea
-OUTPUT_NONAV= $(basename $(notdir $(OBS3)))_NONAV.nmea
-OUTPUT_ST12 = $(basename $(notdir $(OBS3)))_ST12.nmea
-OUTPUT_VRS1 = $(basename $(notdir $(OBS2)))_VRS1.nmea
-OUTPUT_VRS2 = $(basename $(notdir $(OBS3)))_VRS2.nmea
-test: test_L6 test_L6_week test_L6_bnx test_VRS test_ST12 test_NONAV test_ST12_VRS
+CMD = ./rnx2rtkp$(EXT)
+
+# for kinematic
+CONF_L6   = kinematic.conf
+CONF_VRS  = kinematic_vrs.conf
+
+
+# for static
+#CONF_L6  = static.conf
+#CONF_VRS = static_vrs.conf
+
+
+OPTT   = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
+OBS    = $(DATADIR)0627239Q.obs
+VRS    = $(DATADIR)vrs2019239Q.obs
+NAV    = $(DATADIR)sept_2019239.nav
+L6     = $(DATADIR)2019239Q.l6
+OPTT_W = -ts 2018/11/25 0:00:00 -te 2018/11/25 00:59:59 -l6w 2028
+OBS_W  = $(DATADIR)0161329A.obs
+NAV_W  = $(DATADIR)tskc2018329.nav
+L6_W   = $(DATADIR)2018328X_329A.l6
+OPTT_B = -ts 2019/08/27 16:00:00 -te 2019/08/27 16:59:59
+OBS_B  = $(DATADIR)0627239Q.bnx
+NAV_B  = $(DATADIR)sept_2019239.nav
+L6_B   = $(DATADIR)2019239Q.l6
+OPTT_ST12 = -ts 2019/12/15 01:00:00 -te 2019/12/15 01:59:59
+OBS_ST12_B= $(DATADIR)0627349AB.bnx
+NAV_ST12  = $(DATADIR)sept_2019349.nav
+L6_ST12   = $(DATADIR)2019349B.l6
+VRS_ST12= $(DATADIR)vrs2019349B.obs
+
+INPUT_L6   = $(OBS) $(NAV) $(L6)
+INPUT_VRS  = $(OBS) $(NAV) $(VRS)
+OUTPUT_L6  = $(basename $(notdir $(OBS)))_L6.nmea
+OUTPUT_VRS = $(basename $(notdir $(OBS)))_VRS.nmea
+INPUT_L6W  = $(OBS_W) $(NAV_W) $(L6_W)
+INPUT_L6B  = $(OBS_B) $(NAV_B) $(L6_B)
+INPUT_ST12 = $(OBS_ST12_B) $(NAV_ST12) $(L6_ST12)
+INPUT_NONAV= $(OBS_ST12_B) $(L6_ST12)
+INPUT_VRS_ST12 = $(OBS_ST12_B) $(NAV_ST12) $(VRS_ST12)
+OUTPUT_L6  = $(basename $(notdir $(OBS)))_claslib_L6.nmea
+OUTPUT_VRS = $(basename $(notdir $(OBS)))_claslib_VRS.nmea
+OUTPUT_L6W = $(basename $(notdir $(OBS_W)))_claslib_L6W.nmea
+OUTPUT_L6B = $(basename $(notdir $(OBS_B)))_claslib_L6B.nmea
+OUTPUT_ST12= $(basename $(notdir $(OBS_ST12_B)))_claslib_ST12.nmea
+OUTPUT_NONAV= $(basename $(notdir $(OBS_ST12_B)))_claslib_NONAV.nmea
+OUTPUT_VRS_ST12 = $(basename $(notdir $(OBS_ST12_B)))_claslib_VRS_ST12.nmea
+
 test_L6 :
-	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF1) $(INPUT_L6)    -o $(OUTPUT_L6)
-test_L6_week:
-	rnx2rtkp -ti 1 $(TIME1) -x 2 -k $(CONF1) $(INPUT_L6W)   -o $(OUTPUT_L6W)
-test_L6_bnx:
-	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF1) $(INPUT_L6B)   -o $(OUTPUT_L6B)
-test_VRS :
-	rnx2rtkp -ti 1 $(TIME2) -x 2 -k $(CONF2) $(INPUT_VRS)   -o $(OUTPUT_VRS)
-test_ST12:
-	rnx2rtkp -ti 1 $(TIME3) -x 2 -k $(CONF1) $(INPUT_ST12)  -o $(OUTPUT_ST12)
-test_NONAV:
-	rnx2rtkp -ti 1 $(TIME3) -x 2 -k $(CONF1) $(INPUT_NONAV) -o $(OUTPUT_NONAV)
-test_ST12_VRS:
-	rnx2rtkp -ti 1 $(TIME3) -x 3 -k $(CONF2) $(INPUT_VRS2)  -o $(OUTPUT_VRS2)
+	$(CMD) -ti 1 $(OPTT) -x 2 -k $(CONF_L6) $(INPUT_L6) -o $(OUTPUT_L6)
 
+test_L6_week:
+	$(CMD) -ti 1 $(OPTT_W) -x 2 -k $(CONF_L6) $(INPUT_L6W) -o $(OUTPUT_L6W)
+
+test_L6_bnx:
+	$(CMD) -ti 1 $(OPTT_B) -x 2 -k $(CONF_L6) $(INPUT_L6B) -o $(OUTPUT_L6B)
+
+test_VRS :
+	$(CMD) -ti 1 $(OPTT) -x 2 -k $(CONF_VRS) $(INPUT_VRS) -o $(OUTPUT_VRS)
+
+test_ST12:
+	$(CMD) -ti 1 $(OPTT_ST12) -x 2 -k $(CONF_L6) $(INPUT_ST12) -o $(OUTPUT_ST12)
+	
+test_NONAV:
+	$(CMD) -ti 1 $(OPTT_ST12) -x 2 -k $(CONF_L6) $(INPUT_NONAV) -o $(OUTPUT_NONAV)
+
+test_ST12_VRS:
+	$(CMD) -ti 1 $(OPTT_ST12) -x 3 -k $(CONF_VRS) $(INPUT_VRS_ST12) -o $(OUTPUT_VRS_ST12)
+
+clean :
+	rm -f rnx2rtkp$(EXT) *.o
+
+cleano :
+	rm -f *.o
+
+depend :
+	-@ rm -f makefile.depend
+	-@ for i in $(SRCS:%.c=$(SRC)/%.c); do\
+		$(CC) -MM -MG $(CFLAGS) $$i >> makefile.depend;\
+	done
+	-@ for i in $(RCV_SRCS:%.c=$(RCV_SRC)/%.c); do\
+		$(CC) -MM -MG $(CFLAGS) $$i >> makefile.depend;\
+	done
